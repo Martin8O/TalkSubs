@@ -1,0 +1,11 @@
+# Terms and names that the speech model writes wrong, put right in the subtitle text.
+# The app comes with no terms of its own: every field has its own names, so users list theirs in Settings.
+# The format, for terms added here:
+#
+# [[term]]
+# write = "Nietzsche"           # the term as the subtitles should have it
+# also = ["Nietzsches"]         # other spellings that are right as they are (optional)
+# wrong = ["Neechee", "Nichee"] # what the model writes instead (one or more words each; compared without case and
+#                               # punctuation; a plural "...s" and a possessive "...'s" of a wrong form are found too)
+# fix_case = false              # a term with a capital is also given its capital where the model wrote it in lower
+#                               # case; false turns that off for a term that is an ordinary word too (optional)

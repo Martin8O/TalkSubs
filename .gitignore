@@ -1,0 +1,37 @@
+# Local data — never committed
+data/
+
+# Downloaded models and every tool cache kept inside the project
+models/
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+web/dist/
+
+# Build output
+build/
+dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
+secrets/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+# Windows shortcuts name this machine's folders
+*.lnk

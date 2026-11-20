@@ -1,0 +1,2386 @@
+{
+ "title": "ApiContract",
+ "description": "Every shape the server and the window exchange.",
+ "type": "object",
+ "additionalProperties": false,
+ "$defs": {
+  "AddJobRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "path": {
+     "maxLength": 4096,
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "path"
+   ],
+   "title": "AddJobRequest",
+   "type": "object"
+  },
+  "AddLinkRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "url": {
+     "maxLength": 8192,
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "url"
+   ],
+   "title": "AddLinkRequest",
+   "type": "object"
+  },
+  "CardPackEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "card_pack",
+     "default": "card_pack",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "card_pack": {
+     "$ref": "#/$defs/ModelsInfo"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "card_pack"
+   ],
+   "title": "CardPackEvent",
+   "type": "object"
+  },
+  "CheckRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "cues": {
+     "items": {
+      "$ref": "#/$defs/Cue-Input"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "cues"
+   ],
+   "title": "CheckRequest",
+   "type": "object"
+  },
+  "CheckResult": {
+   "additionalProperties": false,
+   "properties": {
+    "violations": {
+     "items": {
+      "$ref": "#/$defs/Violation"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "violations"
+   ],
+   "title": "CheckResult",
+   "type": "object"
+  },
+  "Cue-Input": {
+   "additionalProperties": false,
+   "description": "One subtitle: its own text (one string per line) and times on the track's frame grid.",
+   "properties": {
+    "id": {
+     "description": "Stable within its track; new cues take the track's next_cue_id",
+     "minimum": 1,
+     "type": "integer"
+    },
+    "start_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "lines": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "translation": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "The cue's translation, one string per line; None while not translated"
+    }
+   },
+   "required": [
+    "id",
+    "start_ms",
+    "end_ms",
+    "lines"
+   ],
+   "title": "Cue",
+   "type": "object"
+  },
+  "Cue-Output": {
+   "additionalProperties": false,
+   "description": "One subtitle: its own text (one string per line) and times on the track's frame grid.",
+   "properties": {
+    "id": {
+     "description": "Stable within its track; new cues take the track's next_cue_id",
+     "minimum": 1,
+     "type": "integer"
+    },
+    "start_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "lines": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "translation": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "The cue's translation, one string per line; None while not translated"
+    }
+   },
+   "required": [
+    "id",
+    "start_ms",
+    "end_ms",
+    "lines",
+    "translation"
+   ],
+   "title": "Cue",
+   "type": "object"
+  },
+  "DialogRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "kind": {
+     "enum": [
+      "files",
+      "folder"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "kind"
+   ],
+   "title": "DialogRequest",
+   "type": "object"
+  },
+  "DialogResult": {
+   "additionalProperties": false,
+   "properties": {
+    "paths": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "paths"
+   ],
+   "title": "DialogResult",
+   "type": "object"
+  },
+  "Document": {
+   "additionalProperties": false,
+   "properties": {
+    "schema_version": {
+     "const": 3,
+     "default": 3,
+     "type": "integer"
+    },
+    "app_version": {
+     "type": "string"
+    },
+    "media": {
+     "$ref": "#/$defs/Media"
+    },
+    "run_config": {
+     "$ref": "#/$defs/RunConfig"
+    },
+    "segments": {
+     "items": {
+      "$ref": "#/$defs/Segment"
+     },
+     "type": "array"
+    },
+    "subtitles": {
+     "description": "At most one track per preset",
+     "items": {
+      "$ref": "#/$defs/SubtitleTrack"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "schema_version",
+    "app_version",
+    "media",
+    "run_config",
+    "segments",
+    "subtitles"
+   ],
+   "title": "Document",
+   "type": "object"
+  },
+  "ErrorResponse": {
+   "additionalProperties": false,
+   "properties": {
+    "error": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "error"
+   ],
+   "title": "ErrorResponse",
+   "type": "object"
+  },
+  "ExportConflict": {
+   "additionalProperties": false,
+   "description": "409 from export: these files exist; ask the user, then send the request again with replace = true.",
+   "properties": {
+    "error": {
+     "type": "string"
+    },
+    "existing": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "error",
+    "existing"
+   ],
+   "title": "ExportConflict",
+   "type": "object"
+  },
+  "ExportRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "presets": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "formats": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "replace": {
+     "default": false,
+     "type": "boolean"
+    },
+    "texts": {
+     "items": {
+      "enum": [
+       "original",
+       "translation"
+      ],
+      "type": "string"
+     },
+     "minItems": 1,
+     "type": "array"
+    }
+   },
+   "required": [
+    "presets",
+    "formats"
+   ],
+   "title": "ExportRequest",
+   "type": "object"
+  },
+  "ExportResult": {
+   "additionalProperties": false,
+   "properties": {
+    "folder": {
+     "type": "string"
+    },
+    "files": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "skipped": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "folder",
+    "files",
+    "skipped"
+   ],
+   "title": "ExportResult",
+   "type": "object"
+  },
+  "FileSource": {
+   "additionalProperties": false,
+   "description": "A media file on this machine, used where it is.",
+   "properties": {
+    "kind": {
+     "const": "file",
+     "default": "file",
+     "type": "string"
+    },
+    "path": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "kind",
+    "path"
+   ],
+   "title": "FileSource",
+   "type": "object"
+  },
+  "FrameRate": {
+   "additionalProperties": false,
+   "description": "Exact video frame rate as a fraction, e.g. 30000/1001.",
+   "properties": {
+    "num": {
+     "exclusiveMinimum": 0,
+     "type": "integer"
+    },
+    "den": {
+     "exclusiveMinimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "num",
+    "den"
+   ],
+   "title": "FrameRate",
+   "type": "object"
+  },
+  "Job": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[0-9a-f]{12}$",
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "source": {
+     "discriminator": {
+      "mapping": {
+       "file": "#/$defs/FileSource",
+       "link": "#/$defs/LinkSource",
+       "upload": "#/$defs/UploadSource"
+      },
+      "propertyName": "kind"
+     },
+     "oneOf": [
+      {
+       "$ref": "#/$defs/FileSource"
+      },
+      {
+       "$ref": "#/$defs/UploadSource"
+      },
+      {
+       "$ref": "#/$defs/LinkSource"
+      }
+     ]
+    },
+    "state": {
+     "default": "queued",
+     "enum": [
+      "fetching",
+      "queued",
+      "running",
+      "done",
+      "failed",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "created_at": {
+     "type": "number"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "finished_at": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "attempts": {
+     "default": 0,
+     "type": "integer"
+    },
+    "error": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "note": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "project_file": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "progress": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/JobProgress"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "engine": {
+     "default": "parakeet",
+     "type": "string"
+    },
+    "exported": {
+     "default": [],
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "preview": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/JobPreview"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "media_s": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "id",
+    "name",
+    "source",
+    "state",
+    "created_at",
+    "started_at",
+    "finished_at",
+    "attempts",
+    "error",
+    "note",
+    "project_file",
+    "progress",
+    "engine",
+    "exported",
+    "preview",
+    "media_s"
+   ],
+   "title": "Job",
+   "type": "object"
+  },
+  "JobEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "job",
+     "default": "job",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "job": {
+     "$ref": "#/$defs/Job"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "job"
+   ],
+   "title": "JobEvent",
+   "type": "object"
+  },
+  "JobPreview": {
+   "additionalProperties": false,
+   "description": "The small copy of the media the window plays, and its waveform. Live only: rebuilt from disk on every start.",
+   "properties": {
+    "state": {
+     "enum": [
+      "waiting",
+      "making",
+      "ready",
+      "failed"
+     ],
+     "type": "string"
+    },
+    "kind": {
+     "anyOf": [
+      {
+       "enum": [
+        "video",
+        "audio"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "fraction": {
+     "default": 0.0,
+     "maximum": 1.0,
+     "minimum": 0.0,
+     "type": "number"
+    },
+    "media_done_s": {
+     "default": 0.0,
+     "type": "number"
+    },
+    "media_total_s": {
+     "default": 0.0,
+     "type": "number"
+    },
+    "error": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "peaks_per_s": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "state",
+    "kind",
+    "fraction",
+    "media_done_s",
+    "media_total_s",
+    "error",
+    "peaks_per_s"
+   ],
+   "title": "JobPreview",
+   "type": "object"
+  },
+  "JobProgress": {
+   "additionalProperties": false,
+   "properties": {
+    "phase": {
+     "anyOf": [
+      {
+       "const": "fetch",
+       "type": "string"
+      },
+      {
+       "enum": [
+        "load",
+        "decode",
+        "speech",
+        "recognise",
+        "done"
+       ],
+       "type": "string"
+      }
+     ]
+    },
+    "fraction": {
+     "maximum": 1.0,
+     "minimum": 0.0,
+     "type": "number"
+    },
+    "media_done_s": {
+     "type": "number"
+    },
+    "media_total_s": {
+     "type": "number"
+    },
+    "eta_s": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "phase",
+    "fraction",
+    "media_done_s",
+    "media_total_s",
+    "eta_s"
+   ],
+   "title": "JobProgress",
+   "type": "object"
+  },
+  "Limits": {
+   "additionalProperties": false,
+   "properties": {
+    "max_chars_per_line": {
+     "maximum": 100,
+     "minimum": 10,
+     "type": "integer"
+    },
+    "max_lines": {
+     "maximum": 2,
+     "minimum": 1,
+     "type": "integer"
+    },
+    "max_cps": {
+     "maximum": 40,
+     "minimum": 5,
+     "type": "number"
+    },
+    "cps_counts_spaces": {
+     "type": "boolean"
+    },
+    "min_duration_ms": {
+     "maximum": 10000,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "max_duration_ms": {
+     "maximum": 20000,
+     "minimum": 1000,
+     "type": "integer"
+    },
+    "min_gap_frames": {
+     "maximum": 25,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "close_gaps_up_to_frames": {
+     "maximum": 50,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "default_fps": {
+     "description": "Frame grid for audio-only media, e.g. 25/1",
+     "pattern": "^\\d+(/\\d+)?$",
+     "type": "string"
+    }
+   },
+   "required": [
+    "max_chars_per_line",
+    "max_lines",
+    "max_cps",
+    "cps_counts_spaces",
+    "min_duration_ms",
+    "max_duration_ms",
+    "min_gap_frames",
+    "close_gaps_up_to_frames",
+    "default_fps"
+   ],
+   "title": "Limits",
+   "type": "object"
+  },
+  "LinkSource": {
+   "additionalProperties": false,
+   "description": "A recording behind a download link. Only its sound is fetched and kept (sealed, in the upload folder); the\nlink itself lives sealed beside it and never appears in a message - a presigned link's signature is a secret.",
+   "properties": {
+    "kind": {
+     "const": "link",
+     "default": "link",
+     "type": "string"
+    },
+    "upload_id": {
+     "pattern": "^[0-9a-f]{12}$",
+     "type": "string"
+    },
+    "path": {
+     "type": "string"
+    },
+    "shown": {
+     "type": "string"
+    },
+    "had_video": {
+     "default": false,
+     "type": "boolean"
+    },
+    "frame_rate": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "kind",
+    "upload_id",
+    "path",
+    "shown",
+    "had_video",
+    "frame_rate"
+   ],
+   "title": "LinkSource",
+   "type": "object"
+  },
+  "MachineEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "machine",
+     "default": "machine",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "machine": {
+     "$ref": "#/$defs/MachineInfo"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "machine"
+   ],
+   "title": "MachineEvent",
+   "type": "object"
+  },
+  "MachineInfo": {
+   "additionalProperties": false,
+   "description": "What this PC runs the model on, and how fast: a job takes about fixed_s + media_s * per_s seconds.",
+   "properties": {
+    "device": {
+     "enum": [
+      "cuda",
+      "cpu"
+     ],
+     "type": "string"
+    },
+    "reason": {
+     "enum": [
+      "card",
+      "no_driver",
+      "no_card",
+      "card_too_old",
+      "card_too_small",
+      "no_card_support",
+      "card_pack_missing",
+      "driver_too_old"
+     ],
+     "type": "string"
+    },
+    "card": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "cpu_threads": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "fixed_s": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "per_s": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "measured_by": {
+     "anyOf": [
+      {
+       "enum": [
+        "test",
+        "jobs"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "measuring": {
+     "default": false,
+     "type": "boolean"
+    },
+    "measure_waiting": {
+     "default": false,
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "device",
+    "reason",
+    "card",
+    "cpu_threads",
+    "fixed_s",
+    "per_s",
+    "measured_by",
+    "measuring",
+    "measure_waiting"
+   ],
+   "title": "MachineInfo",
+   "type": "object"
+  },
+  "Media": {
+   "additionalProperties": false,
+   "properties": {
+    "source": {
+     "description": "Absolute path of the media file when it was transcribed",
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "size_bytes": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "duration_ms": {
+     "description": "Container duration reported by ffprobe",
+     "minimum": 0,
+     "type": "integer"
+    },
+    "decoded_ms": {
+     "description": "Length of the decoded audio actually recognised",
+     "minimum": 0,
+     "type": "integer"
+    },
+    "has_video": {
+     "type": "boolean"
+    },
+    "frame_rate": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/FrameRate"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "None for audio-only files"
+    },
+    "audio_stream_index": {
+     "description": "Which audio track was used (0 = first)",
+     "minimum": 0,
+     "type": "integer"
+    },
+    "audio_streams": {
+     "minimum": 1,
+     "type": "integer"
+    },
+    "sample_rate_hz": {
+     "description": "Original sample rate of that track",
+     "minimum": 0,
+     "type": "integer"
+    },
+    "channels": {
+     "description": "Original channel count of that track",
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "source",
+    "name",
+    "size_bytes",
+    "duration_ms",
+    "decoded_ms",
+    "has_video",
+    "frame_rate",
+    "audio_stream_index",
+    "audio_streams",
+    "sample_rate_hz",
+    "channels"
+   ],
+   "title": "Media",
+   "type": "object"
+  },
+  "ModelsEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "models",
+     "default": "models",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "models": {
+     "$ref": "#/$defs/ModelsInfo"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "models"
+   ],
+   "title": "ModelsEvent",
+   "type": "object"
+  },
+  "ModelsInfo": {
+   "additionalProperties": false,
+   "description": "The speech model's files: downloaded once, on the first start; the queue waits until they are in.",
+   "properties": {
+    "state": {
+     "enum": [
+      "checking",
+      "absent",
+      "downloading",
+      "ready",
+      "failed"
+     ],
+     "type": "string"
+    },
+    "done_bytes": {
+     "default": 0,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "total_bytes": {
+     "default": 0,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "eta_s": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "error": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "error_kind": {
+     "anyOf": [
+      {
+       "enum": [
+        "no_connection",
+        "dropped",
+        "secure",
+        "site",
+        "disk_full",
+        "no_space",
+        "damaged",
+        "other"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "need_bytes": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "free_bytes": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "state",
+    "done_bytes",
+    "total_bytes",
+    "eta_s",
+    "error",
+    "error_kind",
+    "need_bytes",
+    "free_bytes"
+   ],
+   "title": "ModelsInfo",
+   "type": "object"
+  },
+  "PausedEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "paused",
+     "default": "paused",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "reason": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "kind": {
+     "anyOf": [
+      {
+       "enum": [
+        "gpu_busy",
+        "gpu_memory",
+        "disk_full"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "reason",
+    "kind"
+   ],
+   "title": "PausedEvent",
+   "type": "object"
+  },
+  "Preset": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[a-z0-9][a-z0-9-]*$",
+     "type": "string"
+    },
+    "name": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "description": {
+     "type": "string"
+    },
+    "language": {
+     "pattern": "^[a-z]{2,3}$",
+     "type": "string"
+    },
+    "limits": {
+     "$ref": "#/$defs/Limits"
+    },
+    "timing": {
+     "$ref": "#/$defs/Timing"
+    },
+    "segmenter": {
+     "$ref": "#/$defs/SegmenterWeights"
+    },
+    "severity": {
+     "$ref": "#/$defs/Severities"
+    },
+    "text": {
+     "$ref": "#/$defs/TextRules",
+     "default": {
+      "drop_fillers": true,
+      "window_capitals": true
+     }
+    }
+   },
+   "required": [
+    "id",
+    "name",
+    "description",
+    "language",
+    "limits",
+    "timing",
+    "segmenter",
+    "severity",
+    "text"
+   ],
+   "title": "Preset",
+   "type": "object"
+  },
+  "PresetInfo": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "kind": {
+     "default": "builtin",
+     "enum": [
+      "builtin",
+      "custom",
+      "retired"
+     ],
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "description": {
+     "type": "string"
+    },
+    "max_chars_per_line": {
+     "type": "integer"
+    },
+    "max_lines": {
+     "type": "integer"
+    },
+    "max_cps": {
+     "type": "number"
+    },
+    "max_duration_ms": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "id",
+    "kind",
+    "name",
+    "description",
+    "max_chars_per_line",
+    "max_lines",
+    "max_cps",
+    "max_duration_ms"
+   ],
+   "title": "PresetInfo",
+   "type": "object"
+  },
+  "PreviewEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "preview",
+     "default": "preview",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "job_id": {
+     "type": "string"
+    },
+    "preview": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/JobPreview"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "job_id",
+    "preview"
+   ],
+   "title": "PreviewEvent",
+   "type": "object"
+  },
+  "ProgressEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "progress",
+     "default": "progress",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "job_id": {
+     "type": "string"
+    },
+    "progress": {
+     "$ref": "#/$defs/JobProgress"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "job_id",
+    "progress"
+   ],
+   "title": "ProgressEvent",
+   "type": "object"
+  },
+  "RemovedEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "removed",
+     "default": "removed",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "job_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "job_id"
+   ],
+   "title": "RemovedEvent",
+   "type": "object"
+  },
+  "ResegmentRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "base_revision": {
+     "maxLength": 64,
+     "minLength": 1,
+     "type": "string"
+    }
+   },
+   "required": [
+    "base_revision"
+   ],
+   "title": "ResegmentRequest",
+   "type": "object"
+  },
+  "RunConfig": {
+   "additionalProperties": false,
+   "properties": {
+    "engine": {
+     "type": "string"
+    },
+    "model": {
+     "description": "Model repository and exact revision",
+     "type": "string"
+    },
+    "provider": {
+     "description": "Execution provider the model actually ran on",
+     "type": "string"
+    },
+    "engine_options": {
+     "additionalProperties": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "integer"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "boolean"
+       }
+      ]
+     },
+     "description": "Engine-specific settings that were used",
+     "type": "object"
+    },
+    "vad": {
+     "$ref": "#/$defs/VadConfig"
+    },
+    "decode_sample_rate_hz": {
+     "type": "integer"
+    },
+    "decode_channels": {
+     "type": "integer"
+    },
+    "versions": {
+     "additionalProperties": {
+      "type": "string"
+     },
+     "description": "App, git commit, libraries, tools, GPU and driver",
+     "type": "object"
+    },
+    "created_utc": {
+     "format": "date-time",
+     "type": "string"
+    }
+   },
+   "required": [
+    "engine",
+    "model",
+    "provider",
+    "engine_options",
+    "vad",
+    "decode_sample_rate_hz",
+    "decode_channels",
+    "versions",
+    "created_utc"
+   ],
+   "title": "RunConfig",
+   "type": "object"
+  },
+  "SaveTrackRequest": {
+   "additionalProperties": false,
+   "properties": {
+    "base_revision": {
+     "maxLength": 64,
+     "minLength": 1,
+     "type": "string"
+    },
+    "cues": {
+     "items": {
+      "$ref": "#/$defs/Cue-Input"
+     },
+     "type": "array"
+    },
+    "next_cue_id": {
+     "minimum": 1,
+     "type": "integer"
+    },
+    "translation_language": {
+     "anyOf": [
+      {
+       "pattern": "^[a-z]{2,3}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "base_revision",
+    "cues",
+    "next_cue_id"
+   ],
+   "title": "SaveTrackRequest",
+   "type": "object"
+  },
+  "Segment": {
+   "additionalProperties": false,
+   "description": "One stretch of speech as the engine recognised it (a pause or the window length bounds it).",
+   "properties": {
+    "start_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "words": {
+     "items": {
+      "$ref": "#/$defs/Word"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "start_ms",
+    "end_ms",
+    "words"
+   ],
+   "title": "Segment",
+   "type": "object"
+  },
+  "SegmenterWeights": {
+   "additionalProperties": false,
+   "properties": {
+    "block_pause_ms": {
+     "exclusiveMinimum": 0,
+     "type": "integer"
+    },
+    "pause_hint_ms": {
+     "exclusiveMinimum": 0,
+     "type": "integer"
+    },
+    "cost_sentence_end": {
+     "type": "number"
+    },
+    "cost_clause": {
+     "type": "number"
+    },
+    "cost_pause": {
+     "type": "number"
+    },
+    "cost_before_conjunction": {
+     "type": "number"
+    },
+    "cost_plain": {
+     "type": "number"
+    },
+    "cost_forbidden": {
+     "type": "number"
+    },
+    "cost_per_cue": {
+     "type": "number"
+    },
+    "cost_cps_over": {
+     "type": "number"
+    },
+    "cost_too_short": {
+     "type": "number"
+    },
+    "cost_sentence_piece": {
+     "type": "number"
+    },
+    "sentence_piece_chars": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "cost_line_imbalance": {
+     "type": "number"
+    },
+    "cost_top_heavy": {
+     "type": "number"
+    },
+    "cost_forced": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "block_pause_ms",
+    "pause_hint_ms",
+    "cost_sentence_end",
+    "cost_clause",
+    "cost_pause",
+    "cost_before_conjunction",
+    "cost_plain",
+    "cost_forbidden",
+    "cost_per_cue",
+    "cost_cps_over",
+    "cost_too_short",
+    "cost_sentence_piece",
+    "sentence_piece_chars",
+    "cost_line_imbalance",
+    "cost_top_heavy",
+    "cost_forced"
+   ],
+   "title": "SegmenterWeights",
+   "type": "object"
+  },
+  "ServerMessage": {
+   "description": "One WebSocket frame from the server (named, so the generated types have a single union to switch on).",
+   "discriminator": {
+    "mapping": {
+     "card_pack": "#/$defs/CardPackEvent",
+     "job": "#/$defs/JobEvent",
+     "machine": "#/$defs/MachineEvent",
+     "models": "#/$defs/ModelsEvent",
+     "paused": "#/$defs/PausedEvent",
+     "preview": "#/$defs/PreviewEvent",
+     "progress": "#/$defs/ProgressEvent",
+     "removed": "#/$defs/RemovedEvent",
+     "snapshot": "#/$defs/SnapshotEvent"
+    },
+    "propertyName": "type"
+   },
+   "oneOf": [
+    {
+     "$ref": "#/$defs/SnapshotEvent"
+    },
+    {
+     "$ref": "#/$defs/JobEvent"
+    },
+    {
+     "$ref": "#/$defs/ProgressEvent"
+    },
+    {
+     "$ref": "#/$defs/PreviewEvent"
+    },
+    {
+     "$ref": "#/$defs/PausedEvent"
+    },
+    {
+     "$ref": "#/$defs/RemovedEvent"
+    },
+    {
+     "$ref": "#/$defs/MachineEvent"
+    },
+    {
+     "$ref": "#/$defs/ModelsEvent"
+    },
+    {
+     "$ref": "#/$defs/CardPackEvent"
+    }
+   ],
+   "title": "ServerMessage"
+  },
+  "Settings": {
+   "additionalProperties": false,
+   "description": "The user's choices, kept in <data>/settings.json (not in the browser, which can be reset).",
+   "properties": {
+    "schema_version": {
+     "default": 3,
+     "type": "integer"
+    },
+    "engine": {
+     "default": "parakeet",
+     "type": "string"
+    },
+    "export_presets": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "export_formats": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "output": {
+     "default": "beside_source",
+     "enum": [
+      "beside_source",
+      "folder"
+     ],
+     "type": "string"
+    },
+    "output_dir": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "language": {
+     "default": "en",
+     "enum": [
+      "en",
+      "cs"
+     ],
+     "type": "string"
+    },
+    "look": {
+     "default": "light",
+     "enum": [
+      "light",
+      "dark"
+     ],
+     "type": "string"
+    },
+    "glossary_text": {
+     "default": "",
+     "maxLength": 200000,
+     "type": "string"
+    },
+    "custom_presets": {
+     "items": {
+      "$ref": "#/$defs/Preset"
+     },
+     "type": "array"
+    },
+    "retired_presets": {
+     "items": {
+      "$ref": "#/$defs/Preset"
+     },
+     "type": "array"
+    },
+    "type_order": {
+     "items": {
+      "type": "string"
+     },
+     "maxItems": 200,
+     "type": "array"
+    }
+   },
+   "required": [
+    "schema_version",
+    "engine",
+    "export_presets",
+    "export_formats",
+    "output",
+    "output_dir",
+    "language",
+    "look",
+    "glossary_text",
+    "custom_presets",
+    "retired_presets",
+    "type_order"
+   ],
+   "title": "Settings",
+   "type": "object"
+  },
+  "SettingsView": {
+   "additionalProperties": false,
+   "description": "GET /api/settings: the stored choices plus what can be chosen.",
+   "properties": {
+    "settings": {
+     "$ref": "#/$defs/Settings"
+    },
+    "output_dir_default": {
+     "type": "string"
+    },
+    "engines": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "presets": {
+     "items": {
+      "$ref": "#/$defs/PresetInfo"
+     },
+     "type": "array"
+    },
+    "formats": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "account": {
+     "default": "",
+     "type": "string"
+    },
+    "glossary_builtin": {
+     "default": "",
+     "type": "string"
+    },
+    "standards": {
+     "items": {
+      "$ref": "#/$defs/Preset"
+     },
+     "type": "array"
+    },
+    "builtin_presets": {
+     "items": {
+      "$ref": "#/$defs/Preset"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "settings",
+    "output_dir_default",
+    "engines",
+    "presets",
+    "formats",
+    "account",
+    "glossary_builtin",
+    "standards",
+    "builtin_presets"
+   ],
+   "title": "SettingsView",
+   "type": "object"
+  },
+  "Severities": {
+   "additionalProperties": false,
+   "properties": {
+    "chars_per_line": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "lines": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "max_duration": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "min_gap": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "cps": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "min_duration": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "break_quality": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "chars_per_line",
+    "lines",
+    "max_duration",
+    "min_gap",
+    "cps",
+    "min_duration",
+    "break_quality"
+   ],
+   "title": "Severities",
+   "type": "object"
+  },
+  "SnapshotEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "snapshot",
+     "default": "snapshot",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "status": {
+     "$ref": "#/$defs/Status"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "status"
+   ],
+   "title": "SnapshotEvent",
+   "type": "object"
+  },
+  "Status": {
+   "additionalProperties": false,
+   "description": "The whole state, sent on every (re)connect and from GET /api/status.",
+   "properties": {
+    "app": {
+     "const": "parakeet-stt",
+     "default": "parakeet-stt",
+     "type": "string"
+    },
+    "app_version": {
+     "type": "string"
+    },
+    "boot_id": {
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "paused_reason": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "paused_kind": {
+     "anyOf": [
+      {
+       "enum": [
+        "gpu_busy",
+        "gpu_memory",
+        "disk_full"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "jobs": {
+     "items": {
+      "$ref": "#/$defs/Job"
+     },
+     "type": "array"
+    },
+    "storage_locked": {
+     "default": false,
+     "type": "boolean"
+    },
+    "machine": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/MachineInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "models": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ModelsInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    },
+    "card_pack": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ModelsInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "app",
+    "app_version",
+    "boot_id",
+    "seq",
+    "paused_reason",
+    "paused_kind",
+    "jobs",
+    "storage_locked",
+    "machine",
+    "models",
+    "card_pack"
+   ],
+   "title": "Status",
+   "type": "object"
+  },
+  "SubtitleTrack": {
+   "additionalProperties": false,
+   "description": "The cues one preset produced (and the user may have edited).",
+   "properties": {
+    "preset_id": {
+     "pattern": "^[a-z0-9][a-z0-9-]*$",
+     "type": "string"
+    },
+    "preset": {
+     "$ref": "#/$defs/Preset",
+     "description": "The rule values used, kept so the track reads the same if the preset changes"
+    },
+    "digest": {
+     "description": "Fingerprint of the preset, its word lists and the segmenter version",
+     "type": "string"
+    },
+    "segmenter_version": {
+     "minimum": 1,
+     "type": "integer"
+    },
+    "frame_rate": {
+     "$ref": "#/$defs/FrameRate",
+     "description": "The frame grid of the cue times"
+    },
+    "created_utc": {
+     "format": "date-time",
+     "type": "string"
+    },
+    "edited": {
+     "default": false,
+     "description": "True once a person changed a cue; never re-segmented silently",
+     "type": "boolean"
+    },
+    "next_cue_id": {
+     "description": "The id the next new cue gets; ids are never reused after a delete",
+     "minimum": 1,
+     "type": "integer"
+    },
+    "translation_language": {
+     "anyOf": [
+      {
+       "pattern": "^[a-z]{2,3}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "Language code of the cues' translations (e.g. cs)"
+    },
+    "cues": {
+     "items": {
+      "$ref": "#/$defs/Cue-Output"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "preset_id",
+    "preset",
+    "digest",
+    "segmenter_version",
+    "frame_rate",
+    "created_utc",
+    "edited",
+    "next_cue_id",
+    "translation_language",
+    "cues"
+   ],
+   "title": "SubtitleTrack",
+   "type": "object"
+  },
+  "TextRules": {
+   "additionalProperties": false,
+   "description": "How the recognised words are tidied for the cues (tidy.py); the document keeps them as recognised.",
+   "properties": {
+    "drop_fillers": {
+     "default": true,
+     "type": "boolean"
+    },
+    "window_capitals": {
+     "default": true,
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "drop_fillers",
+    "window_capitals"
+   ],
+   "title": "TextRules",
+   "type": "object"
+  },
+  "Timing": {
+   "additionalProperties": false,
+   "properties": {
+    "lead_in_ms": {
+     "maximum": 2000,
+     "minimum": 0,
+     "type": "integer"
+    },
+    "end_hold_ms": {
+     "maximum": 5000,
+     "minimum": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "lead_in_ms",
+    "end_hold_ms"
+   ],
+   "title": "Timing",
+   "type": "object"
+  },
+  "TrackSaved": {
+   "additionalProperties": false,
+   "properties": {
+    "revision": {
+     "type": "string"
+    },
+    "next_cue_id": {
+     "type": "integer"
+    },
+    "violations": {
+     "items": {
+      "$ref": "#/$defs/Violation"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "revision",
+    "next_cue_id",
+    "violations"
+   ],
+   "title": "TrackSaved",
+   "type": "object"
+  },
+  "TrackView": {
+   "additionalProperties": false,
+   "description": "GET /api/jobs/<id>/tracks/<preset>: one subtitle track to edit, with what the rule checker finds in it.",
+   "properties": {
+    "track": {
+     "$ref": "#/$defs/SubtitleTrack"
+    },
+    "revision": {
+     "type": "string"
+    },
+    "media_end_ms": {
+     "type": "integer"
+    },
+    "violations": {
+     "items": {
+      "$ref": "#/$defs/Violation"
+     },
+     "type": "array"
+    },
+    "preset_changed": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "track",
+    "revision",
+    "media_end_ms",
+    "violations",
+    "preset_changed"
+   ],
+   "title": "TrackView",
+   "type": "object"
+  },
+  "UploadSource": {
+   "additionalProperties": false,
+   "description": "A file dropped onto the window: the page cannot say where it lives, so the app keeps its own copy.",
+   "properties": {
+    "kind": {
+     "const": "upload",
+     "default": "upload",
+     "type": "string"
+    },
+    "upload_id": {
+     "pattern": "^[0-9a-f]{12}$",
+     "type": "string"
+    },
+    "path": {
+     "type": "string"
+    },
+    "original_name": {
+     "type": "string"
+    },
+    "had_video": {
+     "default": false,
+     "type": "boolean"
+    },
+    "frame_rate": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
+    }
+   },
+   "required": [
+    "kind",
+    "upload_id",
+    "path",
+    "original_name",
+    "had_video",
+    "frame_rate"
+   ],
+   "title": "UploadSource",
+   "type": "object"
+  },
+  "VadConfig": {
+   "additionalProperties": false,
+   "properties": {
+    "model": {
+     "type": "string"
+    },
+    "threshold": {
+     "type": "number"
+    },
+    "min_speech_duration_ms": {
+     "type": "integer"
+    },
+    "min_silence_duration_ms": {
+     "type": "integer"
+    },
+    "speech_pad_ms": {
+     "type": "integer"
+    },
+    "max_speech_duration_s": {
+     "type": "number"
+    }
+   },
+   "required": [
+    "model",
+    "threshold",
+    "min_speech_duration_ms",
+    "min_silence_duration_ms",
+    "speech_pad_ms",
+    "max_speech_duration_s"
+   ],
+   "title": "VadConfig",
+   "type": "object"
+  },
+  "Violation": {
+   "additionalProperties": false,
+   "properties": {
+    "cue_id": {
+     "type": "integer"
+    },
+    "cue_index": {
+     "type": "integer"
+    },
+    "rule": {
+     "enum": [
+      "order",
+      "overlap",
+      "off_grid",
+      "empty",
+      "past_media_end",
+      "chars_per_line",
+      "lines",
+      "max_duration",
+      "min_duration",
+      "cps",
+      "min_gap",
+      "break_quality"
+     ],
+     "type": "string"
+    },
+    "severity": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "type": "string"
+    },
+    "value": {
+     "type": "number"
+    },
+    "limit": {
+     "type": "number"
+    },
+    "message": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "cue_id",
+    "cue_index",
+    "rule",
+    "severity",
+    "value",
+    "limit",
+    "message"
+   ],
+   "title": "Violation",
+   "type": "object"
+  },
+  "Word": {
+   "additionalProperties": false,
+   "properties": {
+    "text": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "start_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "conf": {
+     "anyOf": [
+      {
+       "maximum": 1.0,
+       "minimum": 0.0,
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "Engine confidence 0..1, if it gives one"
+    }
+   },
+   "required": [
+    "text",
+    "start_ms",
+    "end_ms",
+    "conf"
+   ],
+   "title": "Word",
+   "type": "object"
+  },
+  "WordsView": {
+   "additionalProperties": false,
+   "description": "GET /api/jobs/<id>/words: every recognised word, in order; GET /api/jobs/<id>/tracks/<preset>/words: the\nwords as that type's cues have them (fillers dropped, capitals tidied), so a split finds where a word starts.",
+   "properties": {
+    "words": {
+     "items": {
+      "$ref": "#/$defs/Word"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "words"
+   ],
+   "title": "WordsView",
+   "type": "object"
+  }
+ }
+}

@@ -1,0 +1,802 @@
+{
+ "$defs": {
+  "Cue": {
+   "additionalProperties": false,
+   "description": "One subtitle: its own text (one string per line) and times on the track's frame grid.",
+   "properties": {
+    "id": {
+     "description": "Stable within its track; new cues take the track's next_cue_id",
+     "minimum": 1,
+     "title": "Id",
+     "type": "integer"
+    },
+    "start_ms": {
+     "minimum": 0,
+     "title": "Start Ms",
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "title": "End Ms",
+     "type": "integer"
+    },
+    "lines": {
+     "items": {
+      "type": "string"
+     },
+     "title": "Lines",
+     "type": "array"
+    },
+    "translation": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "The cue's translation, one string per line; None while not translated",
+     "title": "Translation"
+    }
+   },
+   "required": [
+    "id",
+    "start_ms",
+    "end_ms",
+    "lines"
+   ],
+   "title": "Cue",
+   "type": "object"
+  },
+  "FrameRate": {
+   "additionalProperties": false,
+   "description": "Exact video frame rate as a fraction, e.g. 30000/1001.",
+   "properties": {
+    "num": {
+     "exclusiveMinimum": 0,
+     "title": "Num",
+     "type": "integer"
+    },
+    "den": {
+     "exclusiveMinimum": 0,
+     "title": "Den",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "num",
+    "den"
+   ],
+   "title": "FrameRate",
+   "type": "object"
+  },
+  "Limits": {
+   "additionalProperties": false,
+   "properties": {
+    "max_chars_per_line": {
+     "maximum": 100,
+     "minimum": 10,
+     "title": "Max Chars Per Line",
+     "type": "integer"
+    },
+    "max_lines": {
+     "maximum": 2,
+     "minimum": 1,
+     "title": "Max Lines",
+     "type": "integer"
+    },
+    "max_cps": {
+     "maximum": 40,
+     "minimum": 5,
+     "title": "Max Cps",
+     "type": "number"
+    },
+    "cps_counts_spaces": {
+     "title": "Cps Counts Spaces",
+     "type": "boolean"
+    },
+    "min_duration_ms": {
+     "maximum": 10000,
+     "minimum": 0,
+     "title": "Min Duration Ms",
+     "type": "integer"
+    },
+    "max_duration_ms": {
+     "maximum": 20000,
+     "minimum": 1000,
+     "title": "Max Duration Ms",
+     "type": "integer"
+    },
+    "min_gap_frames": {
+     "maximum": 25,
+     "minimum": 0,
+     "title": "Min Gap Frames",
+     "type": "integer"
+    },
+    "close_gaps_up_to_frames": {
+     "maximum": 50,
+     "minimum": 0,
+     "title": "Close Gaps Up To Frames",
+     "type": "integer"
+    },
+    "default_fps": {
+     "description": "Frame grid for audio-only media, e.g. 25/1",
+     "pattern": "^\\d+(/\\d+)?$",
+     "title": "Default Fps",
+     "type": "string"
+    }
+   },
+   "required": [
+    "max_chars_per_line",
+    "max_lines",
+    "max_cps",
+    "cps_counts_spaces",
+    "min_duration_ms",
+    "max_duration_ms",
+    "min_gap_frames",
+    "close_gaps_up_to_frames",
+    "default_fps"
+   ],
+   "title": "Limits",
+   "type": "object"
+  },
+  "Media": {
+   "additionalProperties": false,
+   "properties": {
+    "source": {
+     "description": "Absolute path of the media file when it was transcribed",
+     "title": "Source",
+     "type": "string"
+    },
+    "name": {
+     "title": "Name",
+     "type": "string"
+    },
+    "size_bytes": {
+     "minimum": 0,
+     "title": "Size Bytes",
+     "type": "integer"
+    },
+    "duration_ms": {
+     "description": "Container duration reported by ffprobe",
+     "minimum": 0,
+     "title": "Duration Ms",
+     "type": "integer"
+    },
+    "decoded_ms": {
+     "description": "Length of the decoded audio actually recognised",
+     "minimum": 0,
+     "title": "Decoded Ms",
+     "type": "integer"
+    },
+    "has_video": {
+     "title": "Has Video",
+     "type": "boolean"
+    },
+    "frame_rate": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/FrameRate"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "None for audio-only files"
+    },
+    "audio_stream_index": {
+     "description": "Which audio track was used (0 = first)",
+     "minimum": 0,
+     "title": "Audio Stream Index",
+     "type": "integer"
+    },
+    "audio_streams": {
+     "minimum": 1,
+     "title": "Audio Streams",
+     "type": "integer"
+    },
+    "sample_rate_hz": {
+     "description": "Original sample rate of that track",
+     "minimum": 0,
+     "title": "Sample Rate Hz",
+     "type": "integer"
+    },
+    "channels": {
+     "description": "Original channel count of that track",
+     "minimum": 0,
+     "title": "Channels",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "source",
+    "name",
+    "size_bytes",
+    "duration_ms",
+    "decoded_ms",
+    "has_video",
+    "frame_rate",
+    "audio_stream_index",
+    "audio_streams",
+    "sample_rate_hz",
+    "channels"
+   ],
+   "title": "Media",
+   "type": "object"
+  },
+  "Preset": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[a-z0-9][a-z0-9-]*$",
+     "title": "Id",
+     "type": "string"
+    },
+    "name": {
+     "minLength": 1,
+     "title": "Name",
+     "type": "string"
+    },
+    "description": {
+     "title": "Description",
+     "type": "string"
+    },
+    "language": {
+     "pattern": "^[a-z]{2,3}$",
+     "title": "Language",
+     "type": "string"
+    },
+    "limits": {
+     "$ref": "#/$defs/Limits"
+    },
+    "timing": {
+     "$ref": "#/$defs/Timing"
+    },
+    "segmenter": {
+     "$ref": "#/$defs/SegmenterWeights"
+    },
+    "severity": {
+     "$ref": "#/$defs/Severities"
+    },
+    "text": {
+     "$ref": "#/$defs/TextRules",
+     "default": {
+      "drop_fillers": true,
+      "window_capitals": true
+     }
+    }
+   },
+   "required": [
+    "id",
+    "name",
+    "description",
+    "language",
+    "limits",
+    "timing",
+    "segmenter",
+    "severity"
+   ],
+   "title": "Preset",
+   "type": "object"
+  },
+  "RunConfig": {
+   "additionalProperties": false,
+   "properties": {
+    "engine": {
+     "title": "Engine",
+     "type": "string"
+    },
+    "model": {
+     "description": "Model repository and exact revision",
+     "title": "Model",
+     "type": "string"
+    },
+    "provider": {
+     "description": "Execution provider the model actually ran on",
+     "title": "Provider",
+     "type": "string"
+    },
+    "engine_options": {
+     "additionalProperties": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "integer"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "boolean"
+       }
+      ]
+     },
+     "description": "Engine-specific settings that were used",
+     "title": "Engine Options",
+     "type": "object"
+    },
+    "vad": {
+     "$ref": "#/$defs/VadConfig"
+    },
+    "decode_sample_rate_hz": {
+     "title": "Decode Sample Rate Hz",
+     "type": "integer"
+    },
+    "decode_channels": {
+     "title": "Decode Channels",
+     "type": "integer"
+    },
+    "versions": {
+     "additionalProperties": {
+      "type": "string"
+     },
+     "description": "App, git commit, libraries, tools, GPU and driver",
+     "title": "Versions",
+     "type": "object"
+    },
+    "created_utc": {
+     "format": "date-time",
+     "title": "Created Utc",
+     "type": "string"
+    }
+   },
+   "required": [
+    "engine",
+    "model",
+    "provider",
+    "engine_options",
+    "vad",
+    "decode_sample_rate_hz",
+    "decode_channels",
+    "versions",
+    "created_utc"
+   ],
+   "title": "RunConfig",
+   "type": "object"
+  },
+  "Segment": {
+   "additionalProperties": false,
+   "description": "One stretch of speech as the engine recognised it (a pause or the window length bounds it).",
+   "properties": {
+    "start_ms": {
+     "minimum": 0,
+     "title": "Start Ms",
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "title": "End Ms",
+     "type": "integer"
+    },
+    "words": {
+     "items": {
+      "$ref": "#/$defs/Word"
+     },
+     "title": "Words",
+     "type": "array"
+    }
+   },
+   "required": [
+    "start_ms",
+    "end_ms",
+    "words"
+   ],
+   "title": "Segment",
+   "type": "object"
+  },
+  "SegmenterWeights": {
+   "additionalProperties": false,
+   "properties": {
+    "block_pause_ms": {
+     "exclusiveMinimum": 0,
+     "title": "Block Pause Ms",
+     "type": "integer"
+    },
+    "pause_hint_ms": {
+     "exclusiveMinimum": 0,
+     "title": "Pause Hint Ms",
+     "type": "integer"
+    },
+    "cost_sentence_end": {
+     "title": "Cost Sentence End",
+     "type": "number"
+    },
+    "cost_clause": {
+     "title": "Cost Clause",
+     "type": "number"
+    },
+    "cost_pause": {
+     "title": "Cost Pause",
+     "type": "number"
+    },
+    "cost_before_conjunction": {
+     "title": "Cost Before Conjunction",
+     "type": "number"
+    },
+    "cost_plain": {
+     "title": "Cost Plain",
+     "type": "number"
+    },
+    "cost_forbidden": {
+     "title": "Cost Forbidden",
+     "type": "number"
+    },
+    "cost_per_cue": {
+     "title": "Cost Per Cue",
+     "type": "number"
+    },
+    "cost_cps_over": {
+     "title": "Cost Cps Over",
+     "type": "number"
+    },
+    "cost_too_short": {
+     "title": "Cost Too Short",
+     "type": "number"
+    },
+    "cost_sentence_piece": {
+     "title": "Cost Sentence Piece",
+     "type": "number"
+    },
+    "sentence_piece_chars": {
+     "minimum": 0,
+     "title": "Sentence Piece Chars",
+     "type": "integer"
+    },
+    "cost_line_imbalance": {
+     "title": "Cost Line Imbalance",
+     "type": "number"
+    },
+    "cost_top_heavy": {
+     "title": "Cost Top Heavy",
+     "type": "number"
+    },
+    "cost_forced": {
+     "title": "Cost Forced",
+     "type": "number"
+    }
+   },
+   "required": [
+    "block_pause_ms",
+    "pause_hint_ms",
+    "cost_sentence_end",
+    "cost_clause",
+    "cost_pause",
+    "cost_before_conjunction",
+    "cost_plain",
+    "cost_forbidden",
+    "cost_per_cue",
+    "cost_cps_over",
+    "cost_too_short",
+    "cost_sentence_piece",
+    "sentence_piece_chars",
+    "cost_line_imbalance",
+    "cost_top_heavy",
+    "cost_forced"
+   ],
+   "title": "SegmenterWeights",
+   "type": "object"
+  },
+  "Severities": {
+   "additionalProperties": false,
+   "properties": {
+    "chars_per_line": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Chars Per Line",
+     "type": "string"
+    },
+    "lines": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Lines",
+     "type": "string"
+    },
+    "max_duration": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Max Duration",
+     "type": "string"
+    },
+    "min_gap": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Min Gap",
+     "type": "string"
+    },
+    "cps": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Cps",
+     "type": "string"
+    },
+    "min_duration": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Min Duration",
+     "type": "string"
+    },
+    "break_quality": {
+     "enum": [
+      "hard",
+      "soft"
+     ],
+     "title": "Break Quality",
+     "type": "string"
+    }
+   },
+   "required": [
+    "chars_per_line",
+    "lines",
+    "max_duration",
+    "min_gap",
+    "cps",
+    "min_duration",
+    "break_quality"
+   ],
+   "title": "Severities",
+   "type": "object"
+  },
+  "SubtitleTrack": {
+   "additionalProperties": false,
+   "description": "The cues one preset produced (and the user may have edited).",
+   "properties": {
+    "preset_id": {
+     "pattern": "^[a-z0-9][a-z0-9-]*$",
+     "title": "Preset Id",
+     "type": "string"
+    },
+    "preset": {
+     "$ref": "#/$defs/Preset",
+     "description": "The rule values used, kept so the track reads the same if the preset changes"
+    },
+    "digest": {
+     "description": "Fingerprint of the preset, its word lists and the segmenter version",
+     "title": "Digest",
+     "type": "string"
+    },
+    "segmenter_version": {
+     "minimum": 1,
+     "title": "Segmenter Version",
+     "type": "integer"
+    },
+    "frame_rate": {
+     "$ref": "#/$defs/FrameRate",
+     "description": "The frame grid of the cue times"
+    },
+    "created_utc": {
+     "format": "date-time",
+     "title": "Created Utc",
+     "type": "string"
+    },
+    "edited": {
+     "default": false,
+     "description": "True once a person changed a cue; never re-segmented silently",
+     "title": "Edited",
+     "type": "boolean"
+    },
+    "next_cue_id": {
+     "description": "The id the next new cue gets; ids are never reused after a delete",
+     "minimum": 1,
+     "title": "Next Cue Id",
+     "type": "integer"
+    },
+    "translation_language": {
+     "anyOf": [
+      {
+       "pattern": "^[a-z]{2,3}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "Language code of the cues' translations (e.g. cs)",
+     "title": "Translation Language"
+    },
+    "cues": {
+     "items": {
+      "$ref": "#/$defs/Cue"
+     },
+     "title": "Cues",
+     "type": "array"
+    }
+   },
+   "required": [
+    "preset_id",
+    "preset",
+    "digest",
+    "segmenter_version",
+    "frame_rate",
+    "created_utc",
+    "next_cue_id",
+    "cues"
+   ],
+   "title": "SubtitleTrack",
+   "type": "object"
+  },
+  "TextRules": {
+   "additionalProperties": false,
+   "description": "How the recognised words are tidied for the cues (tidy.py); the document keeps them as recognised.",
+   "properties": {
+    "drop_fillers": {
+     "default": true,
+     "title": "Drop Fillers",
+     "type": "boolean"
+    },
+    "window_capitals": {
+     "default": true,
+     "title": "Window Capitals",
+     "type": "boolean"
+    }
+   },
+   "title": "TextRules",
+   "type": "object"
+  },
+  "Timing": {
+   "additionalProperties": false,
+   "properties": {
+    "lead_in_ms": {
+     "maximum": 2000,
+     "minimum": 0,
+     "title": "Lead In Ms",
+     "type": "integer"
+    },
+    "end_hold_ms": {
+     "maximum": 5000,
+     "minimum": 0,
+     "title": "End Hold Ms",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "lead_in_ms",
+    "end_hold_ms"
+   ],
+   "title": "Timing",
+   "type": "object"
+  },
+  "VadConfig": {
+   "additionalProperties": false,
+   "properties": {
+    "model": {
+     "title": "Model",
+     "type": "string"
+    },
+    "threshold": {
+     "title": "Threshold",
+     "type": "number"
+    },
+    "min_speech_duration_ms": {
+     "title": "Min Speech Duration Ms",
+     "type": "integer"
+    },
+    "min_silence_duration_ms": {
+     "title": "Min Silence Duration Ms",
+     "type": "integer"
+    },
+    "speech_pad_ms": {
+     "title": "Speech Pad Ms",
+     "type": "integer"
+    },
+    "max_speech_duration_s": {
+     "title": "Max Speech Duration S",
+     "type": "number"
+    }
+   },
+   "required": [
+    "model",
+    "threshold",
+    "min_speech_duration_ms",
+    "min_silence_duration_ms",
+    "speech_pad_ms",
+    "max_speech_duration_s"
+   ],
+   "title": "VadConfig",
+   "type": "object"
+  },
+  "Word": {
+   "additionalProperties": false,
+   "properties": {
+    "text": {
+     "minLength": 1,
+     "title": "Text",
+     "type": "string"
+    },
+    "start_ms": {
+     "minimum": 0,
+     "title": "Start Ms",
+     "type": "integer"
+    },
+    "end_ms": {
+     "minimum": 0,
+     "title": "End Ms",
+     "type": "integer"
+    },
+    "conf": {
+     "anyOf": [
+      {
+       "maximum": 1.0,
+       "minimum": 0.0,
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "description": "Engine confidence 0..1, if it gives one",
+     "title": "Conf"
+    }
+   },
+   "required": [
+    "text",
+    "start_ms",
+    "end_ms"
+   ],
+   "title": "Word",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "properties": {
+  "schema_version": {
+   "const": 3,
+   "default": 3,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "app_version": {
+   "title": "App Version",
+   "type": "string"
+  },
+  "media": {
+   "$ref": "#/$defs/Media"
+  },
+  "run_config": {
+   "$ref": "#/$defs/RunConfig"
+  },
+  "segments": {
+   "items": {
+    "$ref": "#/$defs/Segment"
+   },
+   "title": "Segments",
+   "type": "array"
+  },
+  "subtitles": {
+   "description": "At most one track per preset",
+   "items": {
+    "$ref": "#/$defs/SubtitleTrack"
+   },
+   "title": "Subtitles",
+   "type": "array"
+  }
+ },
+ "required": [
+  "app_version",
+  "media",
+  "run_config",
+  "segments"
+ ],
+ "title": "Document",
+ "type": "object"
+}

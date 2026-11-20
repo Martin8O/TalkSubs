@@ -1,0 +1,30 @@
+{
+  "name": "parakeet-stt-web",
+  "private": true,
+  "version": "1.1.0",
+  "description": "The TalkSubs window (React + Vite). Built into parakeet_stt/server/static by scripts/web_check.py build.",
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "json-schema-to-typescript": "16.0.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "wavesurfer.js": "8.0.5"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  }
+}

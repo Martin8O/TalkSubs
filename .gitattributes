@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+tests/golden/** -text
+parakeet_stt/server/static/** -text

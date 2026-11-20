@@ -1,0 +1,79 @@
+[project]
+name = "parakeet-stt"
+version = "1.1.0"
+description = "Local lecture transcription into timed English subtitle templates"
+readme = "README.md"
+requires-python = "==3.11.*"
+dependencies = [
+    # torch is only here for its CUDA 12 / cuDNN 9 libraries, which onnxruntime loads too (see docs/adr.md 0006)
+    "torch==2.11.0",
+    "onnxruntime-gpu==1.23.2",
+    "onnx-asr[hub]==0.12.0",
+    "numpy>=2.2",
+    "pydantic>=2.9,<3",
+    "pysubs2==1.8.1",  # its own header lines are part of the ASS golden file
+    "openpyxl>=3.1.5",
+    "fastapi>=0.121",
+    "uvicorn>=0.38",
+    "websockets>=15",
+    "cryptography==50.0.2",
+]
+
+[project.scripts]
+parakeet-stt = "parakeet_stt.__main__:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "pytest>=8.4",
+    "jiwer>=4.0",
+    "onnx==1.23.2",
+    "types-openpyxl>=3.1.5.20261017",
+    "httpx>=0.28",
+]
+
+[tool.uv]
+# never let uv fetch an interpreter: the project venv is Python 3.11 on the project drive
+python-downloads = "never"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[build-system]
+requires = ["uv_build>=0.9,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "parakeet_stt"
+module-root = ""
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["data", "models", ".cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PL", "BLE"]
+# PLC0415: imports inside functions are deliberate (torch must load before onnxruntime; light modules stay light)
+ignore = ["PLR2004", "PLR0913", "PLC0415"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["parakeet_stt", "tests", "scripts/doctor.py", "scripts/gen_types.py"]
+exclude = ["^data/", "^\\.cache/"]
+
+[[tool.mypy.overrides]]
+module = ["onnx_asr.*", "onnxruntime.*", "onnx.*", "jiwer.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["gpu: needs the GPU, the downloaded model and the eval clips (skipped with a reason otherwise)"]

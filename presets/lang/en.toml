@@ -1,0 +1,36 @@
+# English word lists for choosing where a cue or a line may end.
+# Words are compared in lower case, without surrounding punctuation; a word that carries punctuation
+# (a comma, a full stop ...) is never held to these lists.
+
+# A cue or line may well end BEFORE one of these (conjunctions, prepositions, relative words).
+break_before = [
+  "and", "but", "or", "nor", "so", "yet", "because", "if", "when", "whenever", "while", "although", "though",
+  "unless", "until", "since", "as", "than", "whether", "where", "which", "who", "whom", "whose", "that",
+  "then", "of", "in", "on", "at", "to", "for", "with", "without", "from", "about", "into", "onto", "through",
+  "between", "among", "after", "before", "during", "under", "over", "against", "towards", "toward", "beyond",
+  "like",
+]
+
+# Never end a cue or a line right AFTER one of these: articles, determiners, possessives, prepositions,
+# subject pronouns (the verb follows), auxiliaries and modals, titles before a name (listing "mr" also keeps
+# "Mr." from counting as the end of a sentence).
+no_break_after = [
+  "a", "an", "the", "this", "these", "those", "my", "your", "his", "her", "its", "our", "their", "some", "any",
+  "every", "each", "no", "such", "very", "more", "most",
+  "of", "in", "on", "at", "to", "for", "with", "without", "from", "about", "into", "onto", "through", "by",
+  "between", "among", "under", "over",
+  "i", "he", "she", "we", "they",
+  "am", "is", "are", "was", "were", "be", "been", "will", "would", "can", "could", "shall", "should", "may",
+  "might", "must", "do", "does", "did", "have", "has", "had", "not",
+  "mr", "mrs", "ms", "dr", "st",
+]
+
+# Words written with a capital that are NOT names (so "I" + "Think" style pairs are not kept together).
+not_names = ["i"]
+
+# Sounds that are not words; a preset with text.drop_fillers leaves them out of its cues.
+fillers = ["uh", "uhh", "uhm", "um", "umm", "erm", "hmm", "mm"]
+
+# Words that keep their capital where a speech window starts mid-sentence (its first word otherwise loses the
+# capital the speech model gives it). Compared before an apostrophe, so "I'm", "I'll" and "I've" count as "i".
+capital_always = ["i"]

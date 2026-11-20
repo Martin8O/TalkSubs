@@ -1,0 +1,52 @@
+# A starting point for your own subtitle type (copied, then changed in Settings); not used as it is.
+# Source: Prime Video Subtitling Guidelines, 2026-05-01.
+id = "amazon-style"
+name = "Amazon-style"
+description = "Subtitles after Prime Video's subtitling guidelines: 42 characters x 2 lines, 17 characters per second, 0.83 s to 7 s, 2-frame gaps, fillers left out."
+language = "en"
+
+[limits]
+max_chars_per_line = 42
+max_lines = 2
+max_cps = 17.0
+cps_counts_spaces = true          # line breaks are never counted
+min_duration_ms = 833
+max_duration_ms = 7000
+min_gap_frames = 2
+close_gaps_up_to_frames = 11
+default_fps = "25/1"              # frame grid for audio-only media
+
+[timing]
+lead_in_ms = 0                    # a cue may appear this long before its first word
+end_hold_ms = 500                 # longest stay after the last word, to reach the reading speed
+
+[text]
+drop_fillers = true
+window_capitals = true
+
+[segmenter]
+block_pause_ms = 1500             # a pause this long always ends a cue
+pause_hint_ms = 300               # a pause this long is a good place to end a cue or a line
+cost_sentence_end = 0.0           # cost of ending a cue / line at each kind of place (lower = better)
+cost_clause = 2.0
+cost_pause = 2.0
+cost_before_conjunction = 4.0
+cost_plain = 10.0
+cost_forbidden = 60.0             # after an article, a preposition, a subject pronoun ... or inside a name
+cost_per_cue = 8.0                # prefers fewer, fuller cues
+cost_cps_over = 2.0               # times (characters per second above the limit) squared
+cost_too_short = 20.0             # a cue that cannot reach the minimum duration
+cost_sentence_piece = 20.0        # a cue holding a broken-off piece of a sentence beside another sentence
+sentence_piece_chars = 84         # pieces shorter than this count (84 = any): "... done. It's" / "mind. We sit ..."
+cost_line_imbalance = 0.02        # times (difference of the two line lengths) squared
+cost_top_heavy = 3.0              # the top line longer than the bottom one
+cost_forced = 10000.0             # a word that fits no legal cue goes alone (and is reported)
+
+[severity]
+chars_per_line = "hard"
+lines = "hard"
+max_duration = "hard"
+min_gap = "hard"
+cps = "soft"
+min_duration = "soft"
+break_quality = "soft"
