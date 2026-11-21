@@ -230,3 +230,13 @@ def test_the_pins_describe_the_files_of_this_checkout() -> None:
         for name, p in repo.files.items():
             if p.size < 50_000_000:  # the big one is checked by the end-to-end download (it takes seconds)
                 assert hashlib.sha256((models.folder(repo) / name).read_bytes()).hexdigest() == p.sha256, name
+
+
+def test_speech_models_are_pinned_and_default_is_v2() -> None:
+    assert list(models.SPEECH_MODELS)[0] == "v2"
+    for repo, onnx_asr_name in models.SPEECH_MODELS.values():
+        assert len(repo.revision) == 40
+        assert onnx_asr_name.startswith("nemo-parakeet-tdt-0.6b-")
+        for name, pin in repo.files.items():
+            assert pin.size > 0, name
+            assert len(pin.sha256) == 64, name

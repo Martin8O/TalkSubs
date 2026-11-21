@@ -26,7 +26,7 @@ from parakeet_stt.engines.base import (
 from parakeet_stt.engines.tokens import words_from_tokens
 from parakeet_stt.vad import Window
 
-MODEL = "nemo-parakeet-tdt-0.6b-v2"
+DEFAULT_MODEL = "v2"  # the keys of `models.SPEECH_MODELS`
 CUDA = "CUDAExecutionProvider"
 CPU = "CPUExecutionProvider"
 # Lean settings: 3.8 GB at batch 1 instead of ~10 GB with the library defaults (docs/adr.md 0006).
@@ -57,8 +57,15 @@ class ParakeetEngine:
     name = "parakeet"
 
     def __init__(
-        self, batch_size: int = 1, word_end_offset_ms: int = WORD_END_OFFSET_MS, cpu_threads: int | None = None
+        self,
+        batch_size: int = 1,
+        word_end_offset_ms: int = WORD_END_OFFSET_MS,
+        cpu_threads: int | None = None,
+        model: str = DEFAULT_MODEL,
     ) -> None:
+        if model not in models.SPEECH_MODELS:
+            raise EngineError(f"Unknown speech model {model!r}; use one of {', '.join(models.SPEECH_MODELS)}.")
+        self.model = model
         if batch_size not in BATCH_SIZES:
             raise EngineError(f"Batch size must be one of {BATCH_SIZES} (VRAM budget), not {batch_size}.")
         if cpu_threads is not None and cpu_threads < 1:
@@ -82,15 +89,15 @@ class ParakeetEngine:
             m = machine.detect()
             if m.device == "cuda":
                 try:
-                    self._asr, self._provider = _load(), CUDA
+                    self._asr, self._provider = _load(self.model), CUDA
                 except gpu.CardFilesError as exc:  # forgotten (offered again); this run: the processor (the worker
                     # normally finds it first, so the run is counted as the processor's)
                     print(f"the graphics-card support is damaged, running on the processor: {exc}", file=sys.stderr)
                     self._threads = self.cpu_threads or machine.cpu_threads(m)
-                    self._asr, self._provider = _load_cpu(self._threads), CPU
+                    self._asr, self._provider = _load_cpu(self._threads, self.model), CPU
             else:
                 self._threads = self.cpu_threads or machine.cpu_threads(m)
-                self._asr, self._provider = _load_cpu(self._threads), CPU
+                self._asr, self._provider = _load_cpu(self._threads, self.model), CPU
         except BaseException:
             self._lock.release()
             raise
@@ -109,7 +116,7 @@ class ParakeetEngine:
         device: dict[str, str | int] = {"cpu_threads": self._threads} if self.on_cpu else dict(CUDA_OPTIONS)
         return EngineInfo(
             engine=self.name,
-            model=models.PARAKEET.pinned,
+            model=models.SPEECH_MODELS[self.model][0].pinned,
             provider=self._provider,
             options={"batch_size": self.batch_size, "word_end_offset_ms": self.word_end_offset_ms, **device},
             versions={"onnx-asr": str(gpu.onnx_asr().__version__), **gpu.versions()},
@@ -154,54 +161,55 @@ class ParakeetEngine:
         return TimedSegment(window, words)
 
 
-def _model_folder() -> Path:
+def _model_folder(model: str) -> Path:
     """The pinned model files, downloaded first if they are not here (the app does that before any job, with
     progress in the window; a command-line run on a new PC does it here)."""
     try:
-        models.fetch()
-        return models.folder(models.PARAKEET)
+        repo = models.SPEECH_MODELS[model][0]
+        models.fetch(repos=(repo, models.VAD))
+        return models.folder(repo)
     except models.ModelFetchError as exc:
         raise EngineError(str(exc)) from None
 
 
-def _load() -> Any:
+def _load(model_key: str = DEFAULT_MODEL) -> Any:
     gpu.cuda_libraries()  # the graphics-card support's NVIDIA libraries, before the model opens on the card
     onnx_asr = gpu.onnx_asr()
-    path = _model_folder()
+    path = _model_folder(model_key)
     try:
-        model = onnx_asr.load_model(MODEL, path, providers=[(CUDA, CUDA_OPTIONS)])
+        model = onnx_asr.load_model(models.SPEECH_MODELS[model_key][1], path, providers=[(CUDA, CUDA_OPTIONS)])
     except Exception as exc:  # the library raises several types; the user needs the message
         if _out_of_memory(exc):
             raise EngineOutOfMemory(OUT_OF_MEMORY_MESSAGE) from exc
-        raise EngineError(_load_failed(exc)) from exc
+        raise EngineError(_load_failed(exc, model_key)) from exc
     for session in _sessions(model):
         session.disable_fallback()  # a CUDA failure while running must surface, not go on quietly on the CPU
     _check_on_gpu(model)
     return model.with_timestamps()
 
 
-def _load_cpu(threads: int) -> Any:
+def _load_cpu(threads: int, model_key: str = DEFAULT_MODEL) -> Any:
     """The same model on the processor. onnx-asr then makes the sound features with numpy instead of its own
     onnxruntime session, so `_sessions` does not apply here (and there is no other device to fall back from)."""
     ort = gpu.onnxruntime()
     options = ort.SessionOptions()
     options.intra_op_num_threads = threads
-    path = _model_folder()
+    path = _model_folder(model_key)
     try:
-        model = gpu.onnx_asr().load_model(MODEL, path, providers=[CPU], sess_options=options)
+        model = gpu.onnx_asr().load_model(models.SPEECH_MODELS[model_key][1], path, providers=[CPU], sess_options=options)
     except Exception as exc:  # the library raises several types; the user needs the message
         if _out_of_memory(exc):
             raise EngineError(RAM_MESSAGE) from exc
-        raise EngineError(_load_failed(exc)) from exc
+        raise EngineError(_load_failed(exc, model_key)) from exc
     return model.with_timestamps()
 
 
-def _load_failed(exc: BaseException) -> str:
+def _load_failed(exc: BaseException, model_key: str = DEFAULT_MODEL) -> str:
     """A sentence for the window; the library's own text (it can name folders) goes only to the log."""
     print(f"model load failed: {exc!r}", file=sys.stderr, flush=True)  # the worker's stderr is the app's log
     return (
         f"The speech model could not be loaded ({exc.__class__.__name__}). Its files may be damaged: delete the "
-        f"folder models\\hf\\models--{models.PARAKEET.repo_id.replace('/', '--')} in the app's folder and start the "
+        f"folder models\\hf\\models--{models.SPEECH_MODELS[model_key][0].repo_id.replace('/', '--')} in the app's folder and start the "
         "app again to download it anew."
     )
 

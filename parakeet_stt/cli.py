@@ -31,6 +31,10 @@ def _parser() -> argparse.ArgumentParser:
     t.add_argument("-o", "--out", type=Path, required=True, help="output folder")
     t.add_argument("--engine", default=engines.DEFAULT, choices=engines.names())
     t.add_argument(
+        "--model", default="v2", choices=list(models.SPEECH_MODELS),
+        help="speech model: v2 (English only, default) or v3 (multilingual: 25 European languages incl. Czech, German)",
+    )  # fmt: skip
+    t.add_argument(
         "--batch", type=int, default=1, choices=(1, 2), help="speech windows per GPU step (2 = faster, ~7 GB)"
     )
     t.add_argument("--progress-log", type=Path, help="write every progress event as JSON lines (diagnostics)")
@@ -135,7 +139,7 @@ def _peak_memory_mb() -> float:
     return float(c.PeakWorkingSetSize) / 2**20
 
 
-def _download_models(cancel: CancelToken) -> None:
+def _download_models(cancel: CancelToken, repos: tuple[models.Repo, ...] = models.NEEDED) -> None:
     """The first run on a PC: the speech model, with its progress (at most once a second)."""
     last = 0.0
 
@@ -147,7 +151,7 @@ def _download_models(cancel: CancelToken) -> None:
             print(f"\rDownloading the speech model (once): {done / 1e9:.2f} of {total / 1e9:.2f} GB", end="",
                   file=sys.stderr, flush=True)  # fmt: skip
 
-    models.fetch(show, cancel)
+    models.fetch(show, cancel, repos=repos)
     print(file=sys.stderr)
 
 
@@ -168,13 +172,14 @@ def _transcribe(args: argparse.Namespace) -> int:
     t0 = time.perf_counter()
     try:
         _not_inside_store(args.out)
-        if args.engine == engines.DEFAULT and not models.present():
-            _download_models(cancel)
+        needed = (models.SPEECH_MODELS[args.model][0], models.VAD)
+        if args.engine == engines.DEFAULT and not models.present(needed):
+            _download_models(cancel, needed)
         with blobserve.media_input(args.file, _vault_of(args.file)) as src:
             result = transcribe_file(
                 args.file,
                 engine_name=args.engine,
-                engine_options={"batch_size": args.batch},
+                engine_options={"batch_size": args.batch, "model": args.model},
                 on_progress=_ProgressPrinter(sys.stderr, log),
                 cancel=cancel,
                 source=src,

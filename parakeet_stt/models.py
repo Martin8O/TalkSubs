@@ -61,6 +61,25 @@ PARAKEET = Repo(
         ),
     },
 )
+PARAKEET_V3 = Repo(  # multilingual (25 European languages, Czech and German among them); same pipeline, other files
+    "istupakov/parakeet-tdt-0.6b-v3-onnx",
+    "8f23f0c03c8761650bdb5b40aaf3e40d2c15f1ce",
+    {
+        "config.json": Pin(97, "666903c76b9798caf2c210afd4f6cd60b08a8dbf9800ec8d7a3bc0d2148ac466"),
+        "vocab.txt": Pin(93_939, "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"),
+        "decoder_joint-model.onnx": Pin(72_520_893, "e978ddf6688527182c10fde2eb4b83068421648985ef23f7a86be732be8706c1"),
+        "encoder-model.onnx": Pin(41_770_866, "98a74b21b4cc0017c1e7030319a4a96f4a9506e50f0708f3a516d02a77c96bb1"),
+        "encoder-model.onnx.data": Pin(
+            2_435_420_160, "9a22d372c51455c34f13405da2520baefb7125bd16981397561423ed32d24f36"
+        ),
+        "nemo128.onnx": Pin(139_764, "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f"),
+    },
+)
+# The choosable speech models: name -> (pinned files, onnx-asr's name for them). "v2" is the default (English only).
+SPEECH_MODELS: Mapping[str, tuple[Repo, str]] = {
+    "v2": (PARAKEET, "nemo-parakeet-tdt-0.6b-v2"),
+    "v3": (PARAKEET_V3, "nemo-parakeet-tdt-0.6b-v3"),
+}
 VAD = Repo(
     "istupakov/silero-vad-onnx",
     "b3e3ee3cce4c11ceb63b1a0b229d916069c1ddf6",
