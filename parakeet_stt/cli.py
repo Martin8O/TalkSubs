@@ -58,6 +58,10 @@ def _subtitle_args(p: argparse.ArgumentParser) -> None:
         help=f"subtitle rules; repeat for several, 'all' for every one (default {presets.DEFAULT})",
     )  # fmt: skip
     p.add_argument(
+        "--glossary", action="append", type=Path, metavar="FILE",
+        help="a list of your own terms (one per line, as in Settings: 'Term = wrong1, wrong2'); repeatable, later wins",
+    )  # fmt: skip
+    p.add_argument(
         "--format", default="srt", type=_formats,
         help=f"comma-separated: {','.join(export.FORMATS)} or 'all' (default srt)",
     )  # fmt: skip
@@ -71,6 +75,19 @@ def _formats(text: str) -> list[str]:
             f"unknown format {', '.join(unknown) or text!r}; use {', '.join(export.FORMATS)}"
         )
     return wanted
+
+
+def _glossary(files: list[Path] | None) -> glossary.Glossary | None:
+    """The built-in glossary plus the files' terms (None: no file given, so the built-in one applies)."""
+    if not files:
+        return None
+    texts = []
+    for f in files:
+        try:
+            texts.append(f.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeDecodeError) as exc:
+            raise glossary.GlossaryError(f"The glossary {f.name} cannot be read: {exc}") from None
+    return glossary.current("\n".join(texts))
 
 
 def _presets(chosen: list[str] | None) -> list[str]:
@@ -172,6 +189,7 @@ def _transcribe(args: argparse.Namespace) -> int:
     t0 = time.perf_counter()
     try:
         _not_inside_store(args.out)
+        gl = _glossary(args.glossary)  # before the long recognition: a bad list fails at once
         needed = (models.SPEECH_MODELS[args.model][0], models.VAD)
         if args.engine == engines.DEFAULT and not models.present(needed):
             _download_models(cancel, needed)
@@ -189,7 +207,7 @@ def _transcribe(args: argparse.Namespace) -> int:
         if cancel.cancelled:
             raise Cancelled
         try:
-            doc, reports = subtitles.ensure_tracks(result.document, _presets(args.preset))
+            doc, reports = subtitles.ensure_tracks(result.document, _presets(args.preset), gl)
             outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
         except (subtitles.SubtitleError, presets.PresetError, ValidationError) as exc:
             # the recognition took minutes on the GPU: never lose it to a subtitle problem
@@ -236,7 +254,7 @@ def _export(args: argparse.Namespace) -> int:
         doc = project.load(args.project, sealed_by if vault.is_sealed(args.project) else None)
         out_dir = args.out or args.project.parent
         _not_inside_store(out_dir)
-        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset))
+        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), _glossary(args.glossary))
         made, skipped = subtitles.files_for(
             new_doc,
             [r.track.preset_id for r in reports],

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from parakeet_stt import cli, project
-from parakeet_stt.transcript import Document, Segment
+from parakeet_stt.transcript import Document, Segment, Word
 from tests import factories
 from tests.test_segment import stream
 
@@ -64,3 +64,32 @@ def test_a_stale_track_is_remade_but_an_edited_one_is_kept(tmp_path: Path, capsy
 def test_unknown_format_is_a_usage_error(tmp_path: Path) -> None:
     with pytest.raises(SystemExit):
         cli.main(["export", str(_project(tmp_path)), "--format", "docx"])
+
+
+def test_glossary_files_put_wrong_forms_right_in_the_files_and_the_stored_track(tmp_path: Path) -> None:
+    texts = "Dnes mluvíme o Kamapa a o Diamond way a pak o bardo".split()
+    words = [Word(text=t, start_ms=i * 400, end_ms=i * 400 + 300) for i, t in enumerate(texts)]
+    seg = Segment(start_ms=0, end_ms=words[-1].end_ms, words=words)
+    end = words[-1].end_ms + 2000
+    doc = Document(app_version="0.1.0", media=factories.media(duration_ms=end, decoded_ms=end),
+                   run_config=factories.run_config(), segments=[seg])  # fmt: skip
+    path = tmp_path / "talk.pstt.json"
+    project.save(doc, path)
+    first, second = tmp_path / "a.txt", tmp_path / "b.txt"
+    first.write_text("# notes\nKarmapa = Kamapa\n", encoding="utf-8-sig")  # a BOM, as Windows editors write
+    second.write_text("Diamond Way\n", encoding="utf-8")  # a term alone: gets its capital
+    args = ["export", str(path), "--glossary", str(first), "--glossary", str(second)]
+    assert cli.main([*args, "--preset", "en-subtitles"]) == cli.EXIT_OK
+    srt = (tmp_path / "talk.en-subtitles.srt").read_text(encoding="utf-8")
+    assert "Karmapa" in srt and "Kamapa" not in srt
+    assert "Diamond Way" in srt
+
+
+def test_a_bad_or_missing_glossary_file_is_a_usage_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    path = _project(tmp_path)
+    assert cli.main(["export", str(path), "--glossary", str(tmp_path / "nope.txt")]) == cli.EXIT_USAGE
+    assert "cannot be read" in capsys.readouterr().err
+    bad = tmp_path / "bad.txt"
+    bad.write_text("Karmapa =\n", encoding="utf-8")
+    assert cli.main(["export", str(path), "--glossary", str(bad)]) == cli.EXIT_USAGE
+    assert "Line 1" in capsys.readouterr().err
