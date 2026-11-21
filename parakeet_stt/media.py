@@ -6,6 +6,7 @@ import io
 import json
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from collections import deque
@@ -18,6 +19,7 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 
+from parakeet_stt import ffpipe
 from parakeet_stt.blobserve import MediaInput
 from parakeet_stt.cancel import Cancelled, CancelToken
 
@@ -63,7 +65,7 @@ def _tool(name: str) -> str:
     """The ffmpeg tool shipped beside the app (download package) first, else the one on PATH."""
     from parakeet_stt import env
 
-    bundled = env.ROOT / "ffmpeg" / f"{name}.exe"
+    bundled = env.ROOT / "ffmpeg" / (f"{name}.exe" if sys.platform == "win32" else name)
     exe = str(bundled) if bundled.is_file() else shutil.which(name)
     if not exe:
         raise MediaError(f"{name} was not found. Install ffmpeg and make sure {name} is on PATH.")
@@ -101,7 +103,7 @@ def _run_probe(cmd: list[str], cancel: CancelToken | None) -> tuple[int, str, st
     """ffprobe, killed at once on a cancel (a link far away can stall it for minutes)."""
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
-        creationflags=subprocess.CREATE_NO_WINDOW,  # the app has no console: no window flashing per file
+        **ffpipe.spawn_options(no_window=True),  # type: ignore[arg-type] # the app has no console on Windows
     )  # fmt: skip
     deadline = time.monotonic() + _TOOL_TIMEOUT_S
     while True:
@@ -181,7 +183,7 @@ def decode(
     ]  # fmt: skip
     # own process group: a console Ctrl+C reaches us (we cancel and kill ffmpeg), not ffmpeg directly
     proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **ffpipe.spawn_options(own_group=True)  # type: ignore[arg-type]
     )
     assert proc.stdout is not None and proc.stderr is not None
     err_tail: deque[bytes] = deque(maxlen=50)

@@ -11,13 +11,18 @@ broken still fails here.
 from __future__ import annotations
 
 import importlib.util
-import msvcrt
 import os
 import sys
 from functools import cache
 from pathlib import Path
 from types import ModuleType
 from typing import IO, cast
+
+WINDOWS = sys.platform == "win32"
+if WINDOWS:
+    import msvcrt
+else:
+    import fcntl
 
 # NVIDIA's runtime libraries in the card package: every one the CUDA provider imports, and every one cuDNN and NVRTC
 # load later by name (cuDNN's sub-libraries, NVRTC and its builtins), which then finds the copy already loaded. Order
@@ -67,7 +72,7 @@ def cuda_libraries() -> bool:
     folders findable for the loads by name), then onnxruntime's CUDA provider itself, so a damaged one is caught
     here too. True when it did; False where torch or nothing supplies them. A file that does not load is a
     CardFilesError: the support is forgotten (offered again) and the caller runs on the processor, saying why."""
-    if _has_torch():
+    if not WINDOWS or _has_torch():  # Linux: torch or the system's CUDA libraries (LD_LIBRARY_PATH) supply them
         return False
     root = nvidia_root()
     if root is None:
@@ -204,7 +209,7 @@ def _nvml() -> tuple[str, int | None] | None:
         _fields_ = (("total", ctypes.c_ulonglong), ("free", ctypes.c_ulonglong), ("used", ctypes.c_ulonglong))
 
     try:
-        nvml = ctypes.WinDLL("nvml.dll")
+        nvml = ctypes.WinDLL("nvml.dll") if WINDOWS else ctypes.CDLL("libnvidia-ml.so.1")
     except OSError:
         return None
     if nvml.nvmlInit_v2() != 0:
@@ -254,7 +259,10 @@ class GpuLock:
         fh = path.open("a+b")
         fh.seek(0)  # the lock covers the byte at the current position
         try:
-            msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+            if WINDOWS:
+                msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
             fh.close()
             raise GpuBusy("Another transcription is running on this PC; wait until it finishes.") from None
@@ -264,8 +272,11 @@ class GpuLock:
         if self._fh is None:
             return
         try:
-            self._fh.seek(0)
-            msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+            if WINDOWS:
+                self._fh.seek(0)
+                msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
         finally:
             self._fh.close()
             self._fh = None

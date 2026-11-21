@@ -136,6 +136,11 @@ class _ProgressPrinter:
 
 
 def _peak_memory_mb() -> float:
+    if sys.platform != "win32":
+        import resource
+
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # kilobytes on Linux, bytes on macOS
+        return float(peak) / (2**20 if sys.platform == "darwin" else 1024)
     class Counters(ctypes.Structure):
         _fields_ = [
             ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),

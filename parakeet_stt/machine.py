@@ -10,6 +10,7 @@ from __future__ import annotations
 import ctypes
 import importlib.util
 import os
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
@@ -36,6 +37,7 @@ MIN_COMPUTE = (5, 2)
 MIN_CARD_MB = 5632  # 5.5 GiB: a "6 GB" card reports a little under 6144
 MIN_DRIVER_CUDA = 12000  # cuDriverGetVersion of the oldest driver that runs CUDA 12 (R525 and newer)
 _CC_MAJOR, _CC_MINOR = 75, 76  # CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR / _MINOR
+WINDOWS = sys.platform == "win32"
 _RELATION_PROCESSOR_CORE = 0
 _ERROR_INSUFFICIENT_BUFFER = 122
 
@@ -104,13 +106,19 @@ def _cuda_provider_installed() -> bool:
     spec = importlib.util.find_spec("onnxruntime")
     if spec is None or spec.origin is None:
         return False
-    return (Path(spec.origin).parent / "capi" / "onnxruntime_providers_cuda.dll").is_file()
+    provider = "onnxruntime_providers_cuda.dll" if WINDOWS else "libonnxruntime_providers_cuda.so"
+    return (Path(spec.origin).parent / "capi" / provider).is_file()
+
+
+def _cuda_driver() -> ctypes.CDLL:
+    """The driver's CUDA library: nvcuda.dll on Windows, libcuda.so.1 on Linux (OSError when there is none)."""
+    return ctypes.WinDLL("nvcuda.dll") if WINDOWS else ctypes.CDLL("libcuda.so.1")
 
 
 def _driver_cuda() -> int:
     """The newest CUDA version the installed driver runs (12080 = 12.8); 0 when it cannot say."""
     try:
-        cu = ctypes.WinDLL("nvcuda.dll")
+        cu = _cuda_driver()
     except OSError:
         return 0
     version = ctypes.c_int()
@@ -119,7 +127,7 @@ def _driver_cuda() -> int:
 
 def _driver_present() -> bool:
     try:
-        ctypes.WinDLL("nvcuda.dll")
+        _cuda_driver()
     except OSError:
         return False
     return True
@@ -129,7 +137,7 @@ def _card() -> tuple[str, tuple[int, int], int] | None:
     """(name, compute capability, memory MB) of the first NVIDIA card, None when there is none (or it is
     hidden); DriverError when the driver answers with anything else."""
     try:
-        cu = ctypes.WinDLL("nvcuda.dll")
+        cu = _cuda_driver()
     except OSError:
         return None
     rc = cu.cuInit(0)
@@ -158,7 +166,11 @@ def _card() -> tuple[str, tuple[int, int], int] | None:
 
 
 def cpu_cores() -> tuple[int, int]:
-    """(performance cores, physical cores) from Windows' processor topology; (0, 0) if it cannot be read."""
+    """(performance cores, physical cores) from Windows' processor topology; (0, 0) if it cannot be read. Elsewhere
+    the processors this process may use (a container's CPU limit counts), all taken as performance cores."""
+    if not WINDOWS:
+        n = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 0)
+        return n, n
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     size = ctypes.c_uint32(0)
     kernel.GetLogicalProcessorInformationEx(_RELATION_PROCESSOR_CORE, None, ctypes.byref(size))
@@ -185,8 +197,12 @@ def cpu_cores() -> tuple[int, int]:
 def run_in_background_mode() -> None:
     """This process (and the ffmpeg it starts) works at below-normal priority so the PC stays usable, and Windows
     may not slow it down as background work (it runs without a window and could be moved to efficiency cores)."""
-    import sys
-
+    if not WINDOWS:
+        try:
+            os.nice(10)
+        except OSError:
+            pass
+        return
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.GetCurrentProcess.restype = ctypes.c_void_p
     proc = ctypes.c_void_p(kernel.GetCurrentProcess())
