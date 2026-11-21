@@ -93,3 +93,20 @@ def test_a_bad_or_missing_glossary_file_is_a_usage_error(tmp_path: Path, capsys:
     bad.write_text("Karmapa =\n", encoding="utf-8")
     assert cli.main(["export", str(path), "--glossary", str(bad)]) == cli.EXIT_USAGE
     assert "Line 1" in capsys.readouterr().err
+
+
+def test_plain_layout_writes_stem_srt_and_a_whisperx_shaped_json(tmp_path: Path) -> None:
+    path = _project(tmp_path)
+    gl = tmp_path / "gl.txt"
+    gl.write_text("Karmapa = " + stream(3, n=200)[0].text + "\n", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    assert cli.main(["export", str(path), "-o", str(out), "--layout", "plain", "--glossary", str(gl)]) == cli.EXIT_OK
+    assert sorted(p.name for p in out.iterdir()) == ["talk.json", "talk.srt"]
+    data = json.loads((out / "talk.json").read_text(encoding="utf-8"))
+    assert data["segments"]
+    first = data["segments"][0]
+    assert first["start"] < first["end"] and first["text"]
+    assert {"word", "start", "end"} <= set(first["words"][0])
+    assert data["segments"][0]["words"][0]["word"].startswith("Karmapa")
+    assert sum(len(s["words"]) for s in data["segments"]) == 200  # every word lands in exactly one cue

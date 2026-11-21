@@ -15,7 +15,19 @@ from typing import TextIO
 
 from pydantic import ValidationError
 
-from parakeet_stt import blobserve, engines, export, glossary, media, models, presets, project, subtitles, vault
+from parakeet_stt import (
+    blobserve,
+    engines,
+    export,
+    glossary,
+    media,
+    models,
+    plain_layout,
+    presets,
+    project,
+    subtitles,
+    vault,
+)
 from parakeet_stt.cancel import Cancelled, CancelToken
 from parakeet_stt.engines.base import EngineError
 from parakeet_stt.pipeline import Progress, transcribe_file
@@ -60,6 +72,11 @@ def _subtitle_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--glossary", action="append", type=Path, metavar="FILE",
         help="a list of your own terms (one per line, as in Settings: 'Term = wrong1, wrong2'); repeatable, later wins",
+    )  # fmt: skip
+    p.add_argument(
+        "--layout", default="standard", choices=("standard", "plain"),
+        help="'plain': write <name>.srt and a WhisperX-shaped <name>.json (first preset only) instead of the "
+        "<name>.<preset>.<format> files",
     )  # fmt: skip
     p.add_argument(
         "--format", default="srt", type=_formats,
@@ -213,7 +230,10 @@ def _transcribe(args: argparse.Namespace) -> int:
             raise Cancelled
         try:
             doc, reports = subtitles.ensure_tracks(result.document, _presets(args.preset), gl)
-            outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+            if args.layout == "plain":
+                outputs = plain_layout.files(doc, reports[0].track, gl, args.out, stem)
+            else:
+                outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
         except (subtitles.SubtitleError, presets.PresetError, ValidationError) as exc:
             # the recognition took minutes on the GPU: never lose it to a subtitle problem
             project.write_atomically({out_json: project.dumps(result.document)})
@@ -259,8 +279,10 @@ def _export(args: argparse.Namespace) -> int:
         doc = project.load(args.project, sealed_by if vault.is_sealed(args.project) else None)
         out_dir = args.out or args.project.parent
         _not_inside_store(out_dir)
-        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), _glossary(args.glossary))
-        made, skipped = subtitles.files_for(
+        gl = _glossary(args.glossary)
+        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), gl)
+        made, skipped = (plain_layout.files(new_doc, reports[0].track, gl, out_dir, _stem(args.project.name)), []) \
+            if args.layout == "plain" else subtitles.files_for(
             new_doc,
             [r.track.preset_id for r in reports],
             args.format,
