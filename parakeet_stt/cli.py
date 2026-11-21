@@ -240,7 +240,9 @@ def _transcribe(args: argparse.Namespace) -> int:
             print(f"Error making the subtitles: {exc}", file=sys.stderr)
             print(f"The transcript was saved: {out_json}", file=sys.stderr)
             return EXIT_USAGE
-        project.write_atomically({out_json: project.dumps(doc), **outputs})
+        # plain layout: a caller collecting every file of the folder gets only the .srt and .json it reads
+        keep = {} if args.layout == "plain" else {out_json: project.dumps(doc)}
+        project.write_atomically({**keep, **outputs})
     except Cancelled:
         print("Cancelled. Nothing was written.", file=sys.stderr)
         return EXIT_CANCELLED
@@ -267,7 +269,8 @@ def _transcribe(args: argparse.Namespace) -> int:
     )
     for r in reports:
         print(r.line(), file=sys.stderr)
-    print(out_json)
+    if args.layout != "plain":
+        print(out_json)
     for path in outputs:
         print(path)
     return EXIT_OK
