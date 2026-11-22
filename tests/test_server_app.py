@@ -61,7 +61,7 @@ def test_settings_have_defaults_and_are_kept_on_the_server(client: TestClient, d
     assert s["engine"] == "parakeet" and s["output"] == "beside_source" and s["output_dir"] is None
     assert s["export_presets"] == ["cz-template", "en-subtitles"] and s["export_formats"] == ["srt"]
     assert view["output_dir_default"] == str(data / "subtitles")
-    assert {p["id"] for p in view["presets"]} == {"cz-template", "en-subtitles"} and s["language"] == "en"
+    assert {p["id"] for p in view["presets"]} == {"cz-template", "de-template", "en-subtitles"} and s["language"] == "en"
     assert s["look"] == "light"
     cz = next(p for p in view["presets"] if p["id"] == "cz-template")
     assert (cz["max_chars_per_line"], cz["max_lines"], cz["max_cps"], cz["max_duration_ms"]) == (42, 2, 17.0, 7000)

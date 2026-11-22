@@ -12,7 +12,7 @@ from parakeet_stt import env, presets
 
 
 def test_both_presets_are_there_with_the_agreed_rules() -> None:
-    assert presets.names() == ["cz-template", "en-subtitles"]
+    assert presets.names() == ["cz-template", "de-template", "en-subtitles"]
     assert presets.DEFAULT in presets.names()
     cz, en = presets.get("cz-template"), presets.get("en-subtitles")
     for p in (cz, en):
@@ -54,7 +54,7 @@ def test_adding_a_preset_is_adding_a_file(tmp_path: Path) -> None:
 
 
 def test_unknown_preset_lists_the_ones_there_are() -> None:
-    with pytest.raises(presets.PresetError, match="available: cz-template, en-subtitles"):
+    with pytest.raises(presets.PresetError, match="available: cz-template, de-template, en-subtitles"):
         presets.get("nope")
 
 
