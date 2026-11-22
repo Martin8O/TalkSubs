@@ -9,11 +9,12 @@
 #            transcribe /data/talk.mp3 -o /data/out --model v3 --glossary /data/terms.txt --format srt,vtt,txt
 #
 # MODELS: which speech models to bake in (space separated keys of models.SPEECH_MODELS); only these work offline.
+#   v2 = English only (cannot flip languages), v3 = 25 languages (detects the language itself, can flip mid-sentence).
 ARG BASE=debian:trixie-slim
 FROM ${BASE}
 
 ARG ORT=onnxruntime==1.23.2
-ARG MODELS="v3"
+ARG MODELS="v2 v3"
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
