@@ -16,17 +16,20 @@ from typing import TextIO
 from pydantic import ValidationError
 
 from parakeet_stt import (
+    __version__,
     blobserve,
     engines,
     export,
     glossary,
     media,
     models,
+    pipeline,
     plain_layout,
     presets,
     project,
     subtitles,
     vault,
+    whisperx_import,
 )
 from parakeet_stt.cancel import Cancelled, CancelToken
 from parakeet_stt.engines.base import EngineError
@@ -59,6 +62,11 @@ def _parser() -> argparse.ArgumentParser:
         help="what the files hold: the cues' own text and/or their translation (repeatable; default original)",
     )  # fmt: skip
     _subtitle_args(e)
+    r = sub.add_parser("rechunk", help="make subtitle cues from a WhisperX JSON (no GPU): its words, this app's rules")
+    r.add_argument("whisperx_json", type=Path, help="the <name>.json WhisperX wrote")
+    r.add_argument("media", type=Path, help="the media file it was made from (its length is checked)")
+    r.add_argument("-o", "--out", type=Path, required=True, help="output folder")
+    _subtitle_args(r)
     s = sub.add_parser("schema", help="print the transcript JSON Schema, or --write it to schema/")
     s.add_argument("--write", action="store_true")
     return p
@@ -276,6 +284,35 @@ def _transcribe(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _rechunk(args: argparse.Namespace) -> int:
+    try:
+        _not_inside_store(args.out)
+        gl = _glossary(args.glossary)
+        data = json.loads(args.whisperx_json.read_text(encoding="utf-8"))
+        info = media.probe(args.media)
+        doc = whisperx_import.document_from_whisperx(
+            data, pipeline._media(info, info.duration_s), app_version=__version__
+        )
+        stem = _stem(args.media.name)
+        doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), gl)
+        if args.layout == "plain":
+            outputs = plain_layout.files(doc, reports[0].track, gl, args.out, stem)
+        else:
+            outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+        project.write_atomically(outputs)
+    except (
+        media.MediaError, project.ProjectError, subtitles.SubtitleError, presets.PresetError, glossary.GlossaryError,
+        ValidationError, ValueError, OSError, _InsideStore,
+    ) as exc:  # fmt: skip
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    for r in reports:
+        print(r.line(), file=sys.stderr)
+    for path in outputs:
+        print(path)
+    return EXIT_OK
+
+
 def _export(args: argparse.Namespace) -> int:
     try:
         sealed_by = _vault_of(args.project)
@@ -322,6 +359,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command == "export":
         return _export(args)
+    if args.command == "rechunk":
+        return _rechunk(args)
     if not args.file.is_file():
         print(f"Error: file not found: {args.file}", file=sys.stderr)
         return EXIT_USAGE
