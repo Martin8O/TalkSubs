@@ -1,5 +1,8 @@
-"""The "plain" output layout: `<stem>.srt` and `<stem>.json`, the file names and the JSON shape a WhisperX run leaves
-(`segments[]` with `start`/`end` in seconds, `text` and `words[]` of `word`/`start`/`end`/`score`).
+"""The "plain" output layout: `<stem>.srt`, `.vtt`, `.txt` and `<stem>.json`, the file names and the JSON shape a
+WhisperX run leaves (`segments[]` with `start`/`end` in seconds, `text` and `words[]` of `word`/`start`/`end`/`score`).
+Text files are plain UTF-8 with LF line ends and no BOM, as WhisperX writes them (the standard exporters write the BOM
+and CRLF that Windows tools expect). Writing `.vtt` and `.txt` too keeps a re-run from leaving an older run's files
+beside the new `.srt`.
 
 For callers that already read those files (a batch pipeline that collects "the .srt next to the media" and reads
 cue times from the JSON): they switch the engine without changing how they read the result. The words carry the
@@ -48,8 +51,16 @@ def build(doc: Document, track: SubtitleTrack, gl: Glossary | None) -> dict[str,
     return {"engine": doc.run_config.engine, "model": doc.run_config.model, "segments": segments}
 
 
+_BOM = "\ufeff".encode()
+
+
+def _plain_text(data: bytes) -> bytes:
+    """No BOM, LF line ends."""
+    return data.removeprefix(_BOM).replace(b"\r\n", b"\n")
+
+
 def files(doc: Document, track: SubtitleTrack, gl: Glossary | None, out_dir: Path, stem: str) -> dict[Path, bytes]:
-    """`<stem>.srt` and `<stem>.json` of the track."""
-    srt = export.FORMATS["srt"](doc, track)
-    data = json.dumps(build(doc, track, gl), ensure_ascii=False, indent=2).encode("utf-8")
-    return {out_dir / f"{stem}.srt": srt, out_dir / f"{stem}.json": data}
+    """`<stem>.srt`, `.vtt`, `.txt` and `<stem>.json` of the track."""
+    out = {out_dir / f"{stem}.{fmt}": _plain_text(export.FORMATS[fmt](doc, track)) for fmt in ("srt", "vtt", "txt")}
+    out[out_dir / f"{stem}.json"] = json.dumps(build(doc, track, gl), ensure_ascii=False, indent=2).encode("utf-8")
+    return out

@@ -102,7 +102,10 @@ def test_plain_layout_writes_stem_srt_and_a_whisperx_shaped_json(tmp_path: Path)
     out = tmp_path / "out"
     out.mkdir()
     assert cli.main(["export", str(path), "-o", str(out), "--layout", "plain", "--glossary", str(gl)]) == cli.EXIT_OK
-    assert sorted(p.name for p in out.iterdir()) == ["talk.json", "talk.srt"]
+    assert sorted(p.name for p in out.iterdir()) == ["talk.json", "talk.srt", "talk.txt", "talk.vtt"]
+    for name in ("talk.srt", "talk.vtt", "talk.txt"):  # WhisperX style: no BOM, LF line ends
+        raw = (out / name).read_bytes()
+        assert not raw.startswith(b"\xef\xbb\xbf") and b"\r" not in raw, name
     data = json.loads((out / "talk.json").read_text(encoding="utf-8"))
     assert data["segments"]
     first = data["segments"][0]
