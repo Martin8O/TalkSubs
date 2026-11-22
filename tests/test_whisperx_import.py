@@ -62,3 +62,23 @@ def test_a_word_stretched_over_a_pause_is_capped() -> None:
     ]
     words = whisperx_import.words_from({"segments": [{"start": 0, "end": 12, "text": "Hallo La.", "words": stretched}]})
     assert words[1].end_ms - words[1].start_ms <= 1200
+
+
+def test_words_past_the_end_of_the_audio_are_clamped() -> None:
+    data = {
+        "segments": [
+            {
+                "start": 0,
+                "end": 11,
+                "text": "a b c",
+                "words": [
+                    {"word": "a", "start": 0.0, "end": 0.4},
+                    {"word": "b", "start": 9.9, "end": 10.013},  # 13 ms past the audio
+                    {"word": "c", "start": 10.5, "end": 10.8},  # entirely past it
+                ],
+            }
+        ]
+    }
+    doc = whisperx_import.document_from_whisperx(data, factories.media(duration_ms=10_000, decoded_ms=10_000))
+    assert [w.text for w in doc.words()] == ["a", "b"]
+    assert max(w.end_ms for w in doc.words()) <= 10_000

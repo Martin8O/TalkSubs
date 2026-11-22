@@ -57,6 +57,16 @@ def words_from(data: dict[str, Any]) -> list[Word]:
     return out
 
 
+def clamp(words: list[Word], limit_ms: int) -> list[Word]:
+    """WhisperX can end the last word a few milliseconds past the audio (13 ms seen): times stay inside it."""
+    out: list[Word] = []
+    for w in words:
+        if w.start_ms >= limit_ms:
+            continue
+        out.append(w if w.end_ms <= limit_ms else Word(text=w.text, start_ms=w.start_ms, end_ms=limit_ms, conf=w.conf))
+    return out
+
+
 def segments_from(words: list[Word]) -> list[Segment]:
     """Speech stretches: a pause, or the length bound, starts the next one; they never overlap."""
     segments: list[Segment] = []
@@ -78,7 +88,7 @@ def segments_from(words: list[Word]) -> list[Segment]:
 def document_from_whisperx(
     data: dict[str, Any], media: Media, run_config: RunConfig | None = None, app_version: str = "0"
 ) -> Document:
-    words = words_from(data)
+    words = clamp(words_from(data), media.decoded_ms)
     if not words:
         raise ValueError("The WhisperX result has no words.")
     config = run_config or RunConfig(
