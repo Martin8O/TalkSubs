@@ -24,17 +24,17 @@ def _project(tmp_path: Path) -> Path:
     return path
 
 
-def test_export_makes_every_format_for_both_presets_and_keeps_the_tracks(
+def test_export_makes_every_format_for_every_preset_and_keeps_the_tracks(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     path = _project(tmp_path)
     assert cli.main(["export", str(path), "--preset", "all", "--format", "all"]) == cli.EXIT_OK
     names = sorted(p.name for p in tmp_path.iterdir())
-    for preset in ("cz-template", "en-subtitles"):
+    for preset in ("cz-template", "de-template", "en-subtitles"):
         for fmt in ("srt", "vtt", "ass", "txt", "xlsx"):
             assert f"talk.{preset}.{fmt}" in names
     doc = project.load(path)
-    assert [t.preset_id for t in doc.subtitles] == ["cz-template", "en-subtitles"]
+    assert [t.preset_id for t in doc.subtitles] == ["cz-template", "de-template", "en-subtitles"]
     assert "hard: none" in capsys.readouterr().err
 
     before = path.read_bytes()

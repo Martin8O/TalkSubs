@@ -1,0 +1,41 @@
+# German word lists for choosing where a cue or a line may end (same use as en.toml).
+# Words are compared in lower case, without surrounding punctuation; a word that carries punctuation
+# (a comma, a full stop ...) is never held to these lists.
+
+# A cue or line may well end BEFORE one of these (conjunctions, prepositions, relative words).
+break_before = [
+  "und", "oder", "aber", "denn", "sondern", "weil", "dass", "ob", "wenn", "als", "wie", "während", "obwohl",
+  "damit", "bevor", "nachdem", "bis", "seit", "falls", "sobald", "solange", "indem", "sodass", "wobei", "womit",
+  "wodurch", "wofür", "woran", "worauf", "wo", "wohin", "woher", "welche", "welcher", "welches", "welchen",
+  "mit", "von", "zu", "in", "auf", "an", "für", "über", "unter", "durch", "gegen", "ohne", "nach", "bei", "aus",
+  "um", "zwischen", "vor", "hinter", "neben", "gegenüber", "außer", "entlang",
+]
+
+# Never end a cue or a line right AFTER one of these: articles, determiners, possessives, prepositions,
+# conjunctions that open a clause, subject pronouns (the verb follows), auxiliaries and modals, titles.
+no_break_after = [
+  "der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "einer", "eines",
+  "kein", "keine", "keinen", "keinem", "keiner", "keines", "dieser", "diese", "dieses", "diesen", "diesem",
+  "jeder", "jede", "jedes", "jeden", "jedem", "alle", "allen", "aller", "alles", "manche", "mancher", "solche",
+  "mein", "meine", "meinen", "meinem", "meiner", "dein", "deine", "deinen", "sein", "seine", "seinen", "seinem",
+  "seiner", "ihr", "ihre", "ihren", "ihrem", "ihrer", "unser", "unsere", "unseren", "unserem", "unserer",
+  "euer", "eure", "euren",
+  "mit", "von", "zu", "in", "auf", "an", "für", "über", "unter", "durch", "gegen", "ohne", "nach", "bei", "aus",
+  "um", "zwischen", "vor", "hinter", "neben", "bis", "seit", "während", "wegen", "trotz", "statt", "außer",
+  "und", "oder", "aber", "denn", "sondern", "weil", "dass", "ob", "wenn", "als", "wie", "damit", "obwohl",
+  "ich", "du", "er", "sie", "es", "wir", "man",
+  "bin", "bist", "ist", "sind", "seid", "war", "waren", "wird", "werden", "wurde", "wurden", "habe", "hast",
+  "hat", "haben", "hatte", "hatten", "kann", "kannst", "können", "konnte", "muss", "musst", "müssen", "soll",
+  "sollen", "will", "wollen", "darf", "dürfen", "mag", "möchte", "nicht", "sehr", "so", "auch", "noch", "nur",
+  "herr", "frau", "dr", "prof",
+]
+
+# Words written with a capital that are NOT names ("Ich" starts a sentence; German nouns are capitalised too, which
+# this cannot tell apart, so two nouns in a row stay together at worst).
+not_names = ["ich"]
+
+# Sounds that are not words; a preset with text.drop_fillers leaves them out of its cues.
+fillers = ["äh", "ähm", "ähh", "öh", "öhm", "hm", "hmm", "mhm", "mmh", "mm"]
+
+# German words keep their written capital anywhere: no list needed.
+capital_always = []
