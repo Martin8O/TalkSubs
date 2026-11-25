@@ -35,6 +35,8 @@ def spawn_options(*, own_group: bool = False, no_window: bool = False, low_prior
             flags |= PRIORITY
         return {"creationflags": flags}
     return {"start_new_session": True} if own_group else {}
+
+
 TIMEOUT_S: Final = 120
 PROGRESS_ARGS: Final = ("-nostats", "-progress", "pipe:2")  # put right after the ffmpeg executable
 _PROGRESS_LINE = re.compile(r"^[a-z0-9_]+=")  # ffmpeg's -progress output (values may be padded), not an error

@@ -7,6 +7,7 @@ import order of docs/adr.md 0006 stays with `gpu.py`. Run it in a short-lived pr
 
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import importlib.util
 import os
@@ -198,10 +199,8 @@ def run_in_background_mode() -> None:
     """This process (and the ffmpeg it starts) works at below-normal priority so the PC stays usable, and Windows
     may not slow it down as background work (it runs without a window and could be moved to efficiency cores)."""
     if not WINDOWS:
-        try:
+        with contextlib.suppress(OSError):
             os.nice(10)
-        except OSError:
-            pass
         return
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.GetCurrentProcess.restype = ctypes.c_void_p

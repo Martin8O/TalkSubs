@@ -183,7 +183,10 @@ def decode(
     ]  # fmt: skip
     # own process group: a console Ctrl+C reaches us (we cancel and kill ffmpeg), not ffmpeg directly
     proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **ffpipe.spawn_options(own_group=True)  # type: ignore[arg-type]
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        **ffpipe.spawn_options(own_group=True),  # type: ignore[arg-type]
     )
     assert proc.stdout is not None and proc.stderr is not None
     err_tail: deque[bytes] = deque(maxlen=50)

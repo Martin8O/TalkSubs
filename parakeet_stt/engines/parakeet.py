@@ -196,7 +196,8 @@ def _load_cpu(threads: int, model_key: str = DEFAULT_MODEL) -> Any:
     options.intra_op_num_threads = threads
     path = _model_folder(model_key)
     try:
-        model = gpu.onnx_asr().load_model(models.SPEECH_MODELS[model_key][1], path, providers=[CPU], sess_options=options)
+        onnx_name = models.SPEECH_MODELS[model_key][1]
+        model = gpu.onnx_asr().load_model(onnx_name, path, providers=[CPU], sess_options=options)
     except Exception as exc:  # the library raises several types; the user needs the message
         if _out_of_memory(exc):
             raise EngineError(RAM_MESSAGE) from exc
@@ -207,10 +208,10 @@ def _load_cpu(threads: int, model_key: str = DEFAULT_MODEL) -> Any:
 def _load_failed(exc: BaseException, model_key: str = DEFAULT_MODEL) -> str:
     """A sentence for the window; the library's own text (it can name folders) goes only to the log."""
     print(f"model load failed: {exc!r}", file=sys.stderr, flush=True)  # the worker's stderr is the app's log
+    folder = models.SPEECH_MODELS[model_key][0].repo_id.replace("/", "--")
     return (
         f"The speech model could not be loaded ({exc.__class__.__name__}). Its files may be damaged: delete the "
-        f"folder models\\hf\\models--{models.SPEECH_MODELS[model_key][0].repo_id.replace('/', '--')} in the app's folder and start the "
-        "app again to download it anew."
+        f"folder models\\hf\\models--{folder} in the app's folder and start the app again to download it anew."
     )
 
 

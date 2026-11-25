@@ -35,6 +35,7 @@ from parakeet_stt.cancel import Cancelled, CancelToken
 from parakeet_stt.engines import whisper
 from parakeet_stt.engines.base import EngineError
 from parakeet_stt.pipeline import Progress, transcribe_file
+from parakeet_stt.transcript import Document
 
 EXIT_OK, EXIT_USAGE, EXIT_ENGINE, EXIT_CANCELLED = 0, 2, 3, 130
 
@@ -192,6 +193,7 @@ def _peak_memory_mb() -> float:
 
         peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # kilobytes on Linux, bytes on macOS
         return float(peak) / (2**20 if sys.platform == "darwin" else 1024)
+
     class Counters(ctypes.Structure):
         _fields_ = [
             ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
@@ -228,6 +230,32 @@ def _download_models(cancel: CancelToken, repos: tuple[models.Repo, ...] = model
     print(file=sys.stderr)
 
 
+def _open_progress_log(path: Path | None) -> TextIO | None:
+    if path is None:
+        return None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path.open("w", encoding="utf-8")
+
+
+def _ensure_models(args: argparse.Namespace, cancel: CancelToken) -> None:
+    """The chosen engine's model and the speech finder, downloaded first if they are not here."""
+    whisper_run = args.engine == "whisper"
+    repo = models.WHISPER_MODELS[args.whisper_model] if whisper_run else models.SPEECH_MODELS[args.model][0]
+    needed = (repo, models.VAD)
+    if not models.present(needed):
+        _download_models(cancel, needed)
+
+
+def _subtitle_files(
+    args: argparse.Namespace, document: Document, gl: glossary.Glossary | None, stem: str
+) -> tuple[Document, list[subtitles.TrackReport], dict[Path, bytes]]:
+    """A track per chosen preset, and the files to write: the plain layout (first preset) or the standard one."""
+    doc, reports = subtitles.ensure_tracks(document, _presets(args.preset), gl)
+    if args.layout == "plain":
+        return doc, reports, plain_layout.files(doc, reports[0].track, gl, args.out, stem)
+    return doc, reports, subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+
+
 def _transcribe(args: argparse.Namespace) -> int:
     cancel = CancelToken()
 
@@ -238,20 +266,13 @@ def _transcribe(args: argparse.Namespace) -> int:
         cancel.cancel()
 
     previous = signal.signal(signal.SIGINT, on_sigint)
-    log = None
-    if args.progress_log:
-        args.progress_log.parent.mkdir(parents=True, exist_ok=True)
-        log = args.progress_log.open("w", encoding="utf-8")
+    log = _open_progress_log(args.progress_log)
     t0 = time.perf_counter()
     try:
         _not_inside_store(args.out)
         gl = _glossary(args.glossary)  # before the long recognition: a bad list fails at once
         options = _engine_options(args, gl)
-        whisper_run = args.engine == "whisper"
-        model_repo = models.WHISPER_MODELS[args.whisper_model] if whisper_run else models.SPEECH_MODELS[args.model][0]
-        needed = (model_repo, models.VAD)
-        if not models.present(needed):
-            _download_models(cancel, needed)
+        _ensure_models(args, cancel)
         with blobserve.media_input(args.file, _vault_of(args.file)) as src:
             result = transcribe_file(
                 args.file,
@@ -266,11 +287,7 @@ def _transcribe(args: argparse.Namespace) -> int:
         if cancel.cancelled:
             raise Cancelled
         try:
-            doc, reports = subtitles.ensure_tracks(result.document, _presets(args.preset), gl)
-            if args.layout == "plain":
-                outputs = plain_layout.files(doc, reports[0].track, gl, args.out, stem)
-            else:
-                outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+            doc, reports, outputs = _subtitle_files(args, result.document, gl, stem)
         except (subtitles.SubtitleError, presets.PresetError, ValidationError) as exc:
             # the recognition took minutes on the GPU: never lose it to a subtitle problem
             project.write_atomically({out_json: project.dumps(result.document)})
@@ -322,12 +339,7 @@ def _rechunk(args: argparse.Namespace) -> int:
         doc = whisperx_import.document_from_whisperx(
             data, pipeline._media(info, info.duration_s), app_version=__version__
         )
-        stem = _stem(args.media.name)
-        doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), gl)
-        if args.layout == "plain":
-            outputs = plain_layout.files(doc, reports[0].track, gl, args.out, stem)
-        else:
-            outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+        doc, reports, outputs = _subtitle_files(args, doc, gl, _stem(args.media.name))
         project.write_atomically(outputs)
     except (
         media.MediaError, project.ProjectError, subtitles.SubtitleError, presets.PresetError, glossary.GlossaryError,
@@ -350,14 +362,17 @@ def _export(args: argparse.Namespace) -> int:
         _not_inside_store(out_dir)
         gl = _glossary(args.glossary)
         new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), gl)
-        made, skipped = (plain_layout.files(new_doc, reports[0].track, gl, out_dir, _stem(args.project.name)), []) \
-            if args.layout == "plain" else subtitles.files_for(
-            new_doc,
-            [r.track.preset_id for r in reports],
-            args.format,
-            args.text or ["original"],
-            out_dir,
-            _stem(args.project.name),
+        made, skipped = (
+            (plain_layout.files(new_doc, reports[0].track, gl, out_dir, _stem(args.project.name)), [])
+            if args.layout == "plain"
+            else subtitles.files_for(
+                new_doc,
+                [r.track.preset_id for r in reports],
+                args.format,
+                args.text or ["original"],
+                out_dir,
+                _stem(args.project.name),
+            )
         )
         for pid in skipped:
             print(f"{pid}: no cue is translated yet, so no translated file", file=sys.stderr)

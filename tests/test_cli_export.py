@@ -67,7 +67,7 @@ def test_unknown_format_is_a_usage_error(tmp_path: Path) -> None:
 
 
 def test_glossary_files_put_wrong_forms_right_in_the_files_and_the_stored_track(tmp_path: Path) -> None:
-    texts = "Dnes mluvíme o Kamapa a o Diamond way a pak o bardo".split()
+    texts = ["Dnes", "mluvíme", "o", "Kamapa", "a", "o", "Diamond", "way", "a", "pak", "o", "bardo"]
     words = [Word(text=t, start_ms=i * 400, end_ms=i * 400 + 300) for i, t in enumerate(texts)]
     seg = Segment(start_ms=0, end_ms=words[-1].end_ms, words=words)
     end = words[-1].end_ms + 2000

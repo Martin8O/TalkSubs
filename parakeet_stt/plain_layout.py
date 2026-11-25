@@ -23,6 +23,13 @@ def _seconds(ms: int) -> float:
     return round(ms / 1000, 3)
 
 
+def _word(w: Word) -> dict[str, object]:
+    out: dict[str, object] = {"word": w.text, "start": _seconds(w.start_ms), "end": _seconds(w.end_ms)}
+    if w.conf is not None:
+        out["score"] = round(w.conf, 3)
+    return out
+
+
 def build(doc: Document, track: SubtitleTrack, gl: Glossary | None) -> dict[str, object]:
     """The WhisperX-shaped result; every word goes to the cue its start time falls in."""
     words: list[Word] = [w for seg in doc.segments for w in seg.words]
@@ -41,11 +48,7 @@ def build(doc: Document, track: SubtitleTrack, gl: Glossary | None) -> dict[str,
                 "start": _seconds(cue.start_ms),
                 "end": _seconds(cue.end_ms),
                 "text": " ".join(cue.lines),
-                "words": [
-                    {"word": w.text, "start": _seconds(w.start_ms), "end": _seconds(w.end_ms),
-                     **({"score": round(w.conf, 3)} if w.conf is not None else {})}  # fmt: skip
-                    for w in mine
-                ],
+                "words": [_word(w) for w in mine],
             }
         )
     return {"engine": doc.run_config.engine, "model": doc.run_config.model, "segments": segments}

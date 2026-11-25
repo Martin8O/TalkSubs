@@ -233,7 +233,7 @@ def test_the_pins_describe_the_files_of_this_checkout() -> None:
 
 
 def test_speech_models_are_pinned_and_default_is_v2() -> None:
-    assert list(models.SPEECH_MODELS)[0] == "v2"
+    assert next(iter(models.SPEECH_MODELS)) == "v2"
     for repo, onnx_asr_name in models.SPEECH_MODELS.values():
         assert len(repo.revision) == 40
         assert onnx_asr_name.startswith("nemo-parakeet-tdt-0.6b-")
