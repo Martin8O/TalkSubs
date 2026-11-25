@@ -12,7 +12,7 @@ from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
 
-from parakeet_stt import cli
+from parakeet_stt import cli, engines
 from parakeet_stt.server import uploads
 from parakeet_stt.vault import Role
 from tests.conftest import MakeClip, key_of, unsealed
@@ -66,7 +66,8 @@ def test_settings_have_defaults_and_are_kept_on_the_server(client: TestClient, d
     assert s["look"] == "light"
     cz = next(p for p in view["presets"] if p["id"] == "cz-template")
     assert (cz["max_chars_per_line"], cz["max_lines"], cz["max_cps"], cz["max_duration_ms"]) == (42, 2, 17.0, 7000)
-    assert view["formats"] == ["srt", "vtt", "ass", "txt", "xlsx"] and view["engines"] == ["parakeet"]
+    assert view["formats"] == ["srt", "vtt", "ass", "txt", "xlsx"] and view["engines"] == engines.names()
+    assert view["engines"][0] == "parakeet"  # the default; whisper follows where faster-whisper is installed
 
     out = tmp_path / "subs"
     out.mkdir()
