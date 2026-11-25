@@ -198,7 +198,7 @@ def cpu_cores() -> tuple[int, int]:
 def run_in_background_mode() -> None:
     """This process (and the ffmpeg it starts) works at below-normal priority so the PC stays usable, and Windows
     may not slow it down as background work (it runs without a window and could be moved to efficiency cores)."""
-    if not WINDOWS:
+    if sys.platform != "win32":
         with contextlib.suppress(OSError):
             os.nice(10)
         return

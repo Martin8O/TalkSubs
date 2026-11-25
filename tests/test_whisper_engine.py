@@ -136,7 +136,7 @@ def test_unknown_model_and_options_of_other_engines() -> None:
 
 def test_the_engine_is_offered_only_when_faster_whisper_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ("whisper" in engines.names()) == whisper.available()
-    monkeypatch.setattr(whisper.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr("importlib.util.find_spec", lambda _name: None)
     assert whisper.available() is False
 
 
@@ -161,12 +161,15 @@ def test_the_worker_gives_whisper_the_language_and_the_users_terms() -> None:
     from parakeet_stt.server.worker import JobSpec, _engine_options
 
     cpu = machine.Machine("cpu", "no_card", None, None, 8, 8)
-    base = {"source": "a.mp3", "out_dir": "o", "stem": "a", "data_dir": "d", "glossary_text": "Karmapa = Kamapa\n"}
-    whisper_spec = JobSpec(engine="whisper", speech_language="de", cpu_threads=4, **base)
-    opts = _engine_options(whisper_spec, cpu)
+
+    def spec(engine: str, glossary_text: str = "Karmapa = Kamapa\n", **more: Any) -> JobSpec:
+        return JobSpec(source="a.mp3", out_dir="o", stem="a", data_dir="d", engine=engine,
+                       glossary_text=glossary_text, **more)  # fmt: skip
+
+    opts = _engine_options(spec("whisper", speech_language="de", cpu_threads=4), cpu)
     assert opts == {"cpu_threads": 4, "language": "de", "prompt": "Karmapa"}
-    assert _engine_options(JobSpec(engine="parakeet", **base), cpu) is None
-    broken = JobSpec(engine="whisper", **{**base, "glossary_text": "= nothing"})
+    assert _engine_options(spec("parakeet"), cpu) is None
+    broken = spec("whisper", glossary_text="= nothing")
     assert _engine_options(broken, cpu) == {"language": None, "prompt": None}  # an unusable list: no prompt
 
 

@@ -19,7 +19,7 @@ from types import ModuleType
 from typing import IO, cast
 
 WINDOWS = sys.platform == "win32"
-if WINDOWS:
+if sys.platform == "win32":
     import msvcrt
 else:
     import fcntl
@@ -259,7 +259,7 @@ class GpuLock:
         fh = path.open("a+b")
         fh.seek(0)  # the lock covers the byte at the current position
         try:
-            if WINDOWS:
+            if sys.platform == "win32":
                 msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
             else:
                 fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -272,7 +272,7 @@ class GpuLock:
         if self._fh is None:
             return
         try:
-            if WINDOWS:
+            if sys.platform == "win32":
                 self._fh.seek(0)
                 msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
             else:

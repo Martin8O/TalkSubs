@@ -38,6 +38,8 @@ class Result:
 
 
 def _process_age_s_posix() -> float:
+    if sys.platform == "win32":  # (never called there; tells the type checker that sysconf exists below)
+        return 0.0
     try:  # Linux: start time in clock ticks since boot, the 22nd field of /proc/self/stat (after the "(name)")
         with open("/proc/self/stat", encoding="utf-8") as fh:
             fields = fh.read().rsplit(")", 1)[1].split()

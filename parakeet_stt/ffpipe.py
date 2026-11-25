@@ -14,7 +14,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable
-from typing import Final, Protocol, cast
+from typing import Any, Final, Protocol, cast
 
 from parakeet_stt.cancel import Cancelled, CancelToken
 
@@ -22,7 +22,7 @@ PIPE_READ: Final = 256 * 1024
 PRIORITY: Final = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
 
 
-def spawn_options(*, own_group: bool = False, no_window: bool = False, low_priority: bool = False) -> dict[str, object]:
+def spawn_options(*, own_group: bool = False, no_window: bool = False, low_priority: bool = False) -> dict[str, Any]:
     """`Popen` options for a child ffmpeg/ffprobe, the same on Windows (creation flags) and elsewhere (a session of its
     own, so a console Ctrl+C reaches us and not the child; the priority is left alone)."""
     if sys.platform == "win32":
@@ -66,7 +66,7 @@ def run(
     # feeder keeps its CPU)
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        **spawn_options(own_group=True, no_window=True, low_priority=True),  # type: ignore[arg-type]
+        **spawn_options(own_group=True, no_window=True, low_priority=True),
     )  # fmt: skip
     assert proc.stdout is not None and proc.stderr is not None
     err_tail: deque[str] = deque(maxlen=50)

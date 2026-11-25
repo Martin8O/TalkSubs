@@ -31,10 +31,11 @@ def words_from(data: dict[str, Any]) -> list[Word]:
         words = seg.get("words") or []
         if not words and seg.get("text", "").strip():
             tokens = seg["text"].split()
-            start, end = float(seg["start"]), float(seg["end"])
-            step = (end - start) / len(tokens)
+            seg_start, seg_end = float(seg["start"]), float(seg["end"])
+            step = (seg_end - seg_start) / len(tokens)
             words = [
-                {"word": t, "start": start + i * step, "end": start + (i + 1) * step} for i, t in enumerate(tokens)
+                {"word": t, "start": seg_start + i * step, "end": seg_start + (i + 1) * step}
+                for i, t in enumerate(tokens)
             ]
         for w in words:
             text = str(w.get("word", "")).strip()

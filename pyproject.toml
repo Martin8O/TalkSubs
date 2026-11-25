@@ -75,7 +75,7 @@ files = ["parakeet_stt", "tests", "scripts/doctor.py", "scripts/gen_types.py"]
 exclude = ["^data/", "^\\.cache/"]
 
 [[tool.mypy.overrides]]
-module = ["onnx_asr.*", "onnxruntime.*", "onnx.*", "jiwer.*"]
+module = ["onnx_asr.*", "onnxruntime.*", "onnx.*", "jiwer.*", "faster_whisper.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
