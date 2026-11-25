@@ -75,6 +75,30 @@ PARAKEET_V3 = Repo(  # multilingual (25 European languages, Czech and German amo
         "nemo128.onnx": Pin(139_764, "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f"),
     },
 )
+# Whisper, for the optional second engine (faster-whisper / CTranslate2 conversions, MIT). Large-v3 is what
+# WhisperX runs; tiny is for tests and quick checks only.
+WHISPER_LARGE_V3 = Repo(
+    "Systran/faster-whisper-large-v3",
+    "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+    {
+        "config.json": Pin(2394, "a9306624f5ec14270a014b647e5c316b6e03a662c369758d1b90697a7b0655b9"),
+        "preprocessor_config.json": Pin(340, "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"),
+        "tokenizer.json": Pin(2_480_617, "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca"),
+        "vocabulary.json": Pin(1_068_114, "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"),
+        "model.bin": Pin(3_087_284_237, "69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1"),
+    },
+)
+WHISPER_TINY = Repo(
+    "Systran/faster-whisper-tiny",
+    "d90ca5fe260221311c53c58e660288d3deb8d356",
+    {
+        "config.json": Pin(2249, "a73a28cdfe1c43ccc7202fa333d1f89c202477271407ae9a7f19afa52039cac8"),
+        "tokenizer.json": Pin(2_203_239, "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"),
+        "vocabulary.txt": Pin(459_861, "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"),
+        "model.bin": Pin(75_538_270, "dcb76c6586fc06cbdac6dd21f14cfd129cc4cdd9dce19bf4ffa62e59cbe6e6d1"),
+    },
+)
+WHISPER_MODELS: Mapping[str, Repo] = {"large-v3": WHISPER_LARGE_V3, "tiny": WHISPER_TINY}
 # The choosable speech models: name -> (pinned files, onnx-asr's name for them). "v2" is the default (English only).
 SPEECH_MODELS: Mapping[str, tuple[Repo, str]] = {
     "v2": (PARAKEET, "nemo-parakeet-tdt-0.6b-v2"),
