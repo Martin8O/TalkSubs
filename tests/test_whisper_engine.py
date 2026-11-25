@@ -181,3 +181,21 @@ def test_settings_accept_known_spoken_languages_only() -> None:
     check(Settings(speech_language="pl"))
     with pytest.raises(SettingsError, match="spoken language"):
         check(Settings(speech_language="xx"))
+
+
+def test_a_word_whisper_repeats_endlessly_is_cut_back() -> None:
+    from parakeet_stt.engines.base import TimedWord
+
+    ding = [TimedWord("ding", 10 + i * 0.05, 10.04 + i * 0.05, 0.3) for i in range(300)]
+    words = [
+        TimedWord("Bell:", 9.0, 9.5, 0.9),
+        *ding,
+        TimedWord("I", 25.0, 25.2, 0.9),
+        TimedWord("love", 25.3, 25.6, 0.9),
+    ]
+    kept = whisper.collapse_repeats(words)
+    assert [w.text for w in kept] == ["Bell:", "ding", "ding", "ding", "ding", "I", "love"]
+    pairs = [TimedWord(t, 30 + i * 0.1, 30.08 + i * 0.1, 0.3) for i, t in enumerate(["ding", "dong"] * 40)]
+    assert [w.text for w in whisper.collapse_repeats(pairs)] == ["ding", "dong"] * 4
+    real = [TimedWord(t, i, i + 0.3, 0.9) for i, t in enumerate(["zack,", "zack,", "zack."])]
+    assert whisper.collapse_repeats(real) == real  # a few repeats are speech

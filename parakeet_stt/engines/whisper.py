@@ -43,6 +43,9 @@ LANGUAGES = ("bg", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hr", "
              "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk", "zh")  # fmt: skip
 # Whisper splits hyphenated words and gives the second half its own entry ("Mahayana", "-Buddhisten").
 _JOINERS = ("-", "\u2010", "\u2011", "\u2013")
+# Whisper can loop on a non-speech sound (a bell: "ding ding ding ..." hundreds of times in six seconds). A word
+# repeated more often than this in a row is cut back to this many; real speech repeats a word a few times at most.
+MAX_SAME_WORD_RUN = 4
 _OUT_OF_MEMORY = ("out of memory", "CUBLAS_STATUS_ALLOC_FAILED", "cudaErrorMemoryAllocation")
 OUT_OF_MEMORY_MESSAGE = (
     "The graphics card has no memory left for the Whisper model; another program is probably using it. "
@@ -216,7 +219,24 @@ class WhisperEngine:
                     words[-1] = TimedWord(prev.text + text, prev.start_s, max(prev.end_s, end), joined_conf)
                     continue
                 words.append(TimedWord(text, start, end, conf))
-        return words
+        return collapse_repeats(words)
+
+
+def collapse_repeats(words: list[TimedWord], max_run: int = MAX_SAME_WORD_RUN, longest: int = 3) -> list[TimedWord]:
+    """At most `max_run` copies in a row of the same word or the same run of up to `longest` words ("ding",
+    "ding dong"), compared without case and punctuation; the rest of such a loop is dropped."""
+    keys = [w.text.strip(".,!?;:…\"'").lower() for w in words]
+    same = [0] * (longest + 1)  # per period n: how many words in a row equal the word n places before them
+    out: list[TimedWord] = []
+    for i, w in enumerate(words):
+        drop = False
+        for n in range(1, longest + 1):
+            same[n] = same[n] + 1 if i >= n and keys[i] and keys[i] == keys[i - n] else 0
+            if same[n] > n * (max_run - 1):  # this word starts or continues copy number max_run + 1
+                drop = True
+        if not drop:
+            out.append(w)
+    return out
 
 
 def _version(dist: str) -> str:
