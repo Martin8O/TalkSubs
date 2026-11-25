@@ -65,3 +65,10 @@ def test_rechunk_with_the_german_preset_runs(tmp_path: Path) -> None:
     assert cli.main(args) == cli.EXIT_OK
     srt = (out / "talk.srt").read_text(encoding="utf-8")
     assert "Ursache" in srt
+
+
+def test_the_german_type_is_offered_but_made_by_default_only_for_german_speech() -> None:
+    assert "de-template" in presets.names()
+    assert presets.default_names() == ["cz-template", "en-subtitles"]
+    assert presets.for_language("de") == ["de-template"]
+    assert presets.for_language("en") == [] and presets.for_language(None) == [] and presets.for_language("cs") == []

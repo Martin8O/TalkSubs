@@ -29,7 +29,15 @@ jobs:
           node-version: "24"
 
       - name: ffmpeg
-        run: choco install ffmpeg -y --no-progress
+        # a release build straight from GitHub (the Chocolatey feed timed out once and the step still passed)
+        run: |
+          $zip = "$env:RUNNER_TEMP\ffmpeg.zip"
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile $zip
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          $bin = (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Recurse -Filter ffprobe.exe | Select-Object -First 1).DirectoryName
+          if (-not $bin) { throw "ffprobe.exe not found in the download" }
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+          & "$bin\ffprobe.exe" -version | Select-Object -First 1
 
       - name: Python environment
         run: |

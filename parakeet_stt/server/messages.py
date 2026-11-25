@@ -289,7 +289,7 @@ class Settings(_Model):
 
     schema_version: int = SETTINGS_SCHEMA_VERSION
     engine: str = DEFAULT_ENGINE
-    export_presets: list[str] = Field(default_factory=presets.names)  # every built-in type
+    export_presets: list[str] = Field(default_factory=presets.default_names)  # the built-in types for English text
     export_formats: list[str] = Field(default_factory=lambda: ["srt"])
     output: OutputPlace = "beside_source"  # dropped files have no known folder: they always use output_dir
     output_dir: str | None = None  # None: <data>/subtitles

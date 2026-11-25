@@ -115,7 +115,7 @@ def test_an_engine_an_earlier_version_offered_falls_back_to_the_default(data: Pa
     store = SettingsStore(data, vault)
     store.save(store.load())
     raw = json.loads(unsealed(data / "settings.json", Role.SETTINGS))
-    old = json.dumps({**raw, "engine": "whisper"}).encode()  # what 1.0.0 could save
+    old = json.dumps({**raw, "engine": "qwen3-asr"}).encode()  # an engine this version does not offer
     (data / "settings.json").write_bytes(vault.seal(old, Role.SETTINGS))
     loaded = store.load()
     assert loaded.engine == "parakeet"

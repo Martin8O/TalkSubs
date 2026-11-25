@@ -172,7 +172,8 @@ def _make_tracks(doc: Document, spec: JobSpec) -> tuple[Document, str | None]:
         gl = glossary.builtin()  # the user's own list cannot be used: the built-in one (if any) still applies
     book = presets.book(spec.presets)
     failed = []
-    for pid in [*presets.names(), *(p.id for p in spec.presets)]:
+    built_in = [*presets.default_names(), *presets.for_language(spec.speech_language)]
+    for pid in [*built_in, *(p.id for p in spec.presets)]:
         try:
             doc, _ = subtitles.ensure_tracks(doc, [pid], gl, book)
         except (subtitles.SubtitleError, presets.PresetError, ValidationError) as exc:
