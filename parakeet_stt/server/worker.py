@@ -50,6 +50,7 @@ class JobSpec(BaseModel):
     frame_rate: str | None = None
     glossary_text: str = ""  # the user's own list of terms, as typed (the built-in list comes with the app)
     cpu_threads: int | None = None  # on the processor: the thread count the speed test found fastest
+    speech_language: str | None = None  # the Whisper engine: the spoken language ("auto" or None: detected)
     presets: list[Preset] = []  # the user's own subtitle types to make subtitles for, besides the built-in ones
 
 
@@ -265,8 +266,21 @@ class _Reporter:
 
 
 def _engine_options(spec: JobSpec, here: machine.Machine) -> dict[str, object] | None:
-    """On the processor: the thread count the speed test found fastest (the engine's own choice without one)."""
-    return {"cpu_threads": spec.cpu_threads} if spec.cpu_threads and here.device == "cpu" else None
+    """On the processor: the thread count the speed test found fastest (the engine's own choice without one).
+    Whisper also gets the spoken language and the user's own terms as its prompt (it then prefers those spellings)."""
+    from parakeet_stt import glossary
+    from parakeet_stt.engines import whisper
+
+    options: dict[str, object] = {}
+    if spec.cpu_threads and here.device == "cpu":
+        options["cpu_threads"] = spec.cpu_threads
+    if spec.engine == whisper.WhisperEngine.name:
+        try:
+            terms = [e.term for e in glossary.parse_text(spec.glossary_text)]
+        except glossary.GlossaryError:
+            terms = []
+        options |= {"language": spec.speech_language, "prompt": whisper.prompt_from_terms(terms)}
+    return options or None
 
 
 def _timing(progress: _Reporter, media_s: float, resumed: bool) -> JobTiming | None:

@@ -1629,7 +1629,8 @@
      "preview": "#/$defs/PreviewEvent",
      "progress": "#/$defs/ProgressEvent",
      "removed": "#/$defs/RemovedEvent",
-     "snapshot": "#/$defs/SnapshotEvent"
+     "snapshot": "#/$defs/SnapshotEvent",
+     "whisper_model": "#/$defs/WhisperModelEvent"
     },
     "propertyName": "type"
    },
@@ -1660,6 +1661,9 @@
     },
     {
      "$ref": "#/$defs/CardPackEvent"
+    },
+    {
+     "$ref": "#/$defs/WhisperModelEvent"
     }
    ],
    "title": "ServerMessage"
@@ -1715,6 +1719,11 @@
      ],
      "type": "string"
     },
+    "speech_language": {
+     "default": "auto",
+     "maxLength": 8,
+     "type": "string"
+    },
     "look": {
      "default": "light",
      "enum": [
@@ -1756,6 +1765,7 @@
     "output",
     "output_dir",
     "language",
+    "speech_language",
     "look",
     "glossary_text",
     "custom_presets",
@@ -2003,6 +2013,17 @@
       }
      ],
      "default": null
+    },
+    "whisper_model": {
+     "anyOf": [
+      {
+       "$ref": "#/$defs/ModelsInfo"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null
     }
    },
    "required": [
@@ -2016,7 +2037,8 @@
     "storage_locked",
     "machine",
     "models",
-    "card_pack"
+    "card_pack",
+    "whisper_model"
    ],
    "title": "Status",
    "type": "object"
@@ -2324,6 +2346,29 @@
     "message"
    ],
    "title": "Violation",
+   "type": "object"
+  },
+  "WhisperModelEvent": {
+   "additionalProperties": false,
+   "properties": {
+    "type": {
+     "const": "whisper_model",
+     "default": "whisper_model",
+     "type": "string"
+    },
+    "seq": {
+     "type": "integer"
+    },
+    "whisper_model": {
+     "$ref": "#/$defs/ModelsInfo"
+    }
+   },
+   "required": [
+    "type",
+    "seq",
+    "whisper_model"
+   ],
+   "title": "WhisperModelEvent",
    "type": "object"
   },
   "Word": {

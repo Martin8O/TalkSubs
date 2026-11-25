@@ -254,6 +254,7 @@ export function App() {
             onSaved={setSettings}
             machine={live.queue.machine}
             cardPack={live.queue.cardPack}
+            whisperModel={live.queue.whisperModel}
             onDirty={setSettingsDirty}
           />
         </div>

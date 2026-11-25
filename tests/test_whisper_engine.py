@@ -154,3 +154,27 @@ def test_cli_passes_language_model_and_word_list_to_whisper_only() -> None:
     assert cli._engine_options(parakeet, gl) == {"batch_size": 1, "model": "v2"}
     with pytest.raises(cli._UsageError, match="whisper only"):
         cli._engine_options(cli._parser().parse_args(["transcribe", "x.mp3", "-o", "out", "--language", "de"]), gl)
+
+
+def test_the_worker_gives_whisper_the_language_and_the_users_terms() -> None:
+    from parakeet_stt import machine
+    from parakeet_stt.server.worker import JobSpec, _engine_options
+
+    cpu = machine.Machine("cpu", "no_card", None, None, 8, 8)
+    base = {"source": "a.mp3", "out_dir": "o", "stem": "a", "data_dir": "d", "glossary_text": "Karmapa = Kamapa\n"}
+    whisper_spec = JobSpec(engine="whisper", speech_language="de", cpu_threads=4, **base)
+    opts = _engine_options(whisper_spec, cpu)
+    assert opts == {"cpu_threads": 4, "language": "de", "prompt": "Karmapa"}
+    assert _engine_options(JobSpec(engine="parakeet", **base), cpu) is None
+    broken = JobSpec(engine="whisper", **{**base, "glossary_text": "= nothing"})
+    assert _engine_options(broken, cpu) == {"language": None, "prompt": None}  # an unusable list: no prompt
+
+
+def test_settings_accept_known_spoken_languages_only() -> None:
+    from parakeet_stt.server.messages import Settings
+    from parakeet_stt.server.settings import SettingsError, check
+
+    check(Settings(speech_language="auto"))
+    check(Settings(speech_language="pl"))
+    with pytest.raises(SettingsError, match="spoken language"):
+        check(Settings(speech_language="xx"))

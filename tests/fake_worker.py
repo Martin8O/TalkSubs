@@ -40,6 +40,10 @@ def main() -> int:
         cancelled.set()
 
     threading.Thread(target=watch, daemon=True).start()
+    specs = os.environ.get("FAKE_WORKER_SPECS")  # every spec received, one JSON line each: tests check what was sent
+    if specs:
+        with open(specs, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(spec) + "\n")
     log = os.environ.get("FAKE_WORKER_LOG")  # "<kind> start|end <time>" lines: tests check what overlapped
     kind = str(spec.get("kind", "job"))
     if log:

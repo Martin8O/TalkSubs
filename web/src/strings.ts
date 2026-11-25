@@ -52,6 +52,15 @@ const en = {
       damaged: () => "A downloaded part of the model is damaged. Press Try again.",
     },
   },
+  whisperModel: {
+    label: "Whisper model",
+    offer: (size: string): string =>
+      `Whisper needs its own model (${size}). It is downloaded once; lectures added with Whisper wait until it is in.`,
+    download: (size: string): string => `Download the Whisper model (${size})`,
+    downloading: "Downloading the Whisper model",
+    goingNote: "Closing the app pauses the download; it goes on at the next start.",
+    failedTitle: "The Whisper model is not downloaded yet",
+  },
   card: {
     label: "Graphics-card support",
     offer: (name: string): string => `This PC has an NVIDIA graphics card (${name}) that the app can use.`,
@@ -763,7 +772,9 @@ const en = {
       "column, filled where you have translated.",
     engine:
       "Parakeet is the speech recogniser this app uses: in our tests on lecture recordings the most accurate, " +
-      "very fast on an NVIDIA graphics card and usable on the processor.",
+      "very fast on an NVIDIA graphics card and usable on the processor. Where Whisper is installed it can be " +
+      "chosen instead: slower, but you tell it the spoken language, so it does not switch languages in the " +
+      "middle of a sentence the way Parakeet can with German and other recordings.",
     output:
       "Next to the original file: the subtitles get the video's name and go into the same folder. Dropped files " +
       "have no known folder, so their subtitles always go to the folder below. Existing files are never " +
@@ -775,8 +786,14 @@ const en = {
     engine: "Speech recognition",
     engineNames: {
       parakeet: "Parakeet (fast and accurate)",
+      whisper: "Whisper (you choose the spoken language)",
     } as Record<string, string>,
     engineNote: "Applies to lectures added from now on.",
+    speechLanguage: "Spoken language",
+    speechLanguageAuto: "Detect it",
+    speechLanguageNote:
+      "Whisper writes in this language. Choose it when a recording is in one language; with an interpreter on " +
+      "stage, Detect it lets Whisper decide passage by passage.",
     defaults: "Ticked by default when saving",
     output: "Where to save subtitles",
     besideSource: "Next to the original file",
@@ -892,6 +909,15 @@ const cs: Strings = {
         "Uvolněte místo a stiskněte Zkusit znovu.",
       damaged: () => "Stažená část modelu je poškozená. Stiskněte Zkusit znovu.",
     },
+  },
+  whisperModel: {
+    label: "Model Whisper",
+    offer: (size: string): string =>
+      `Whisper potřebuje vlastní model (${size}). Stáhne se jednou; přednášky přidané s Whisperem počkají, než bude stažený.`,
+    download: (size: string): string => `Stáhnout model Whisper (${size})`,
+    downloading: "Stahuje se model Whisper",
+    goingNote: "Zavřením aplikace se stahování přeruší; pokračuje při dalším spuštění.",
+    failedTitle: "Model Whisper zatím není stažený",
   },
   card: {
     label: "Podpora grafické karty",
@@ -1607,7 +1633,9 @@ const cs: Strings = {
       "Translation, vyplněný tam, kde jste přeložili.",
     engine:
       "Parakeet je rozpoznávač řeči, který aplikace používá: v našich zkouškách na nahrávkách přednášek byl " +
-      "nejpřesnější, na grafické kartě NVIDIA je velmi rychlý a na procesoru použitelný.",
+      "nejpřesnější, na grafické kartě NVIDIA je velmi rychlý a na procesoru použitelný. Kde je nainstalovaný " +
+      "Whisper, dá se zvolit místo něj: je pomalejší, ale řeknete mu jazyk řeči, takže nepřeskakuje uprostřed " +
+      "věty do jiného jazyka, jak to Parakeet u němčiny a jiných nahrávek umí.",
     output:
       "Vedle původního souboru: titulky dostanou jméno videa a uloží se do stejné složky. Přetažené soubory " +
       "známou složku nemají, proto jejich titulky jdou vždy do složky níže. Existující soubory se nikdy " +
@@ -1619,8 +1647,14 @@ const cs: Strings = {
     engine: "Rozpoznávání řeči",
     engineNames: {
       parakeet: "Parakeet (rychlý a přesný)",
+      whisper: "Whisper (jazyk řeči zvolíte vy)",
     },
     engineNote: "Platí pro přednášky přidané od teď.",
+    speechLanguage: "Jazyk řeči",
+    speechLanguageAuto: "Rozpoznat",
+    speechLanguageNote:
+      "Whisper píše v tomto jazyce. Zvolte ho, když je nahrávka v jednom jazyce; s tlumočníkem na pódiu nechte " +
+      "Rozpoznat a Whisper rozhodne úsek po úseku.",
     defaults: "Předem zaškrtnuté při ukládání",
     output: "Kam ukládat titulky",
     besideSource: "Vedle původního souboru",

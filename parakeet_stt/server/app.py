@@ -97,6 +97,9 @@ class ServerConfig:
     # the download package's graphics-card support: here? and how to download it (default: cardpack.py)
     card_present: Callable[[], bool] | None = None
     card_fetch: Callable[[models.ProgressFn, CancelToken], None] | None = None
+    # the Whisper engine's model: here? and how to download it (default: the pinned files, models.py)
+    whisper_present: Callable[[], bool] | None = None
+    whisper_fetch: Callable[[models.ProgressFn, CancelToken], None] | None = None
 
 
 @dataclass
@@ -161,10 +164,12 @@ def _open(cfg: ServerConfig, hub: Hub) -> tuple[Vault | None, Runner | None]:
     runner = Runner(cfg.data_dir, hub, opened.vault, cfg.worker_cmd, kill_after_s=cfg.kill_after_s,
                     busy_retry_s=cfg.busy_retry_s, memory_retry_s=cfg.memory_retry_s, gpu_check=cfg.gpu_check,
                     allow_local_http_links=cfg.allow_local_http_links, own_glossary=prefs.own_glossary,
+                    speech_language=prefs.speech_language,
                     preset_book=prefs.book, job_types=prefs.job_types,
                     machine_check=cfg.machine_check, models_present=cfg.models_present,
                     models_fetch=cfg.models_fetch, card_present=cfg.card_present,
-                    card_fetch=cfg.card_fetch)  # fmt: skip
+                    card_fetch=cfg.card_fetch, whisper_present=cfg.whisper_present,
+                    whisper_fetch=cfg.whisper_fetch)  # fmt: skip
     return opened.vault, runner
 
 
@@ -338,6 +343,10 @@ def create(cfg: ServerConfig) -> Server:  # noqa: PLR0915 - the route table read
     @app.post("/api/card/fetch", status_code=204)
     async def fetch_card_pack() -> None:
         live().fetch_card_pack()
+
+    @app.post("/api/whisper/fetch", status_code=204)
+    async def fetch_whisper_model() -> None:
+        live().fetch_whisper_model()
 
     @app.post("/api/speed/measure", status_code=204)
     async def measure_speed() -> None:

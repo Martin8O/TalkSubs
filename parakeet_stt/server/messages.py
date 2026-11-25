@@ -181,6 +181,8 @@ class Status(_Model):
     models: ModelsInfo | None = None
     # the download package's graphics-card support (offered when machine.reason is "card_pack_missing")
     card_pack: ModelsInfo | None = None
+    # the Whisper engine's model: downloaded when the user chooses Whisper (only where the engine is installed)
+    whisper_model: ModelsInfo | None = None
 
 
 class SnapshotEvent(_Model):
@@ -234,6 +236,12 @@ class CardPackEvent(_Model):
     card_pack: ModelsInfo
 
 
+class WhisperModelEvent(_Model):
+    type: Literal["whisper_model"] = "whisper_model"
+    seq: int
+    whisper_model: ModelsInfo
+
+
 class RemovedEvent(_Model):
     type: Literal["removed"] = "removed"
     seq: int
@@ -249,7 +257,8 @@ ServerEvent = Annotated[
     | RemovedEvent
     | MachineEvent
     | ModelsEvent
-    | CardPackEvent,
+    | CardPackEvent
+    | WhisperModelEvent,
     Field(discriminator="type"),
 ]
 
@@ -285,6 +294,8 @@ class Settings(_Model):
     output: OutputPlace = "beside_source"  # dropped files have no known folder: they always use output_dir
     output_dir: str | None = None  # None: <data>/subtitles
     language: Language = "en"  # the window's language
+    # the spoken language for the Whisper engine ("auto": Whisper detects it); Parakeet detects it itself
+    speech_language: str = Field(default="auto", max_length=8)
     look: Look = "light"  # the window's colours
     # the user's own terms and names, one per line as typed (notes included); see `glossary.parse_text`
     glossary_text: str = Field(default="", max_length=200_000)

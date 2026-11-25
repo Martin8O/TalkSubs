@@ -40,6 +40,7 @@ const status = (boot: string, seq: number, jobs: Job[]): Status => ({
     free_bytes: null,
   },
   card_pack: null,
+  whisper_model: null,
   paused_reason: null,
   paused_kind: null,
   jobs,
@@ -192,6 +193,25 @@ describe("the speech model's download", () => {
     } as const;
     st = apply(st, { type: "card_pack", seq: 2, card_pack: pack });
     expect(st.cardPack?.done_bytes).toBe(5);
+    expect(st.models?.state).toBe("ready");
+  });
+
+  it("keeps the Whisper model's download apart from the speech model and the card support", () => {
+    let st = apply(emptyQueue, snap("b1", 1, []));
+    expect(st.whisperModel).toBeNull();
+    const model = {
+      state: "downloading",
+      done_bytes: 7,
+      total_bytes: 30,
+      eta_s: null,
+      error: null,
+      error_kind: null,
+      need_bytes: null,
+      free_bytes: null,
+    } as const;
+    st = apply(st, { type: "whisper_model", seq: 2, whisper_model: model });
+    expect(st.whisperModel?.done_bytes).toBe(7);
+    expect(st.cardPack).toBeNull();
     expect(st.models?.state).toBe("ready");
   });
 });

@@ -58,6 +58,7 @@ export const api = {
   measureSpeed: () => call<void>("POST", "/api/speed/measure", {}),
   fetchModels: () => call<void>("POST", "/api/models/fetch", {}),
   fetchCardPack: () => call<void>("POST", "/api/card/fetch", {}),
+  fetchWhisperModel: () => call<void>("POST", "/api/whisper/fetch", {}),
   exportJob: (id: string, req: ExportRequest) => call<ExportResult>("POST", `/api/jobs/${id}/export`, req, 120_000),
   reveal: (id: string) => call<void>("POST", `/api/jobs/${id}/reveal`, {}),
   remove: (id: string) => call<void>("POST", `/api/jobs/${id}/remove`, {}),

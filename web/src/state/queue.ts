@@ -14,6 +14,7 @@ export interface QueueState {
   machine: MachineInfo | null; // where the model runs on this PC and how fast; null until the app has looked
   models: ModelsInfo | null; // the speech model's one-time download; null while the store is locked
   cardPack: ModelsInfo | null; // the graphics-card support (download package), offered where a card could use it
+  whisperModel: ModelsInfo | null; // the Whisper engine's model: downloaded when Whisper is chosen
   appVersion: string | null;
 }
 
@@ -28,6 +29,7 @@ export const emptyQueue: QueueState = {
   machine: null,
   models: null,
   cardPack: null,
+  whisperModel: null,
   appVersion: null,
 };
 
@@ -46,6 +48,7 @@ export function apply(state: QueueState, msg: ServerMessage): QueueState {
       machine: st.machine ?? null,
       models: st.models ?? null,
       cardPack: st.card_pack ?? null,
+      whisperModel: st.whisper_model ?? null,
       appVersion: st.app_version,
     };
   }
@@ -78,6 +81,8 @@ export function apply(state: QueueState, msg: ServerMessage): QueueState {
       return { ...next, models: msg.models };
     case "card_pack":
       return { ...next, cardPack: msg.card_pack };
+    case "whisper_model":
+      return { ...next, whisperModel: msg.whisper_model };
   }
 }
 

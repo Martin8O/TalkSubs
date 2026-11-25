@@ -71,6 +71,7 @@ from parakeet_stt.server.messages import (
     SaveTrackRequest,
     Status,
     UploadSource,
+    WhisperModelEvent,
 )
 from parakeet_stt.server.modelfetch import ModelFetch
 from parakeet_stt.server.previews import Previews
@@ -223,6 +224,10 @@ class Runner:
         models_fetch: Callable[[models.ProgressFn, CancelToken], None] | None = None,
         card_present: Callable[[], bool] | None = None,  # default: cardpack.present (a stand-in worker: present)
         card_fetch: Callable[[models.ProgressFn, CancelToken], None] | None = None,  # default: cardpack.fetch
+        # the Whisper engine: the spoken language chosen in Settings, and its model's files (fetched on demand)
+        speech_language: Callable[[], str] | None = None,
+        whisper_present: Callable[[], bool] | None = None,
+        whisper_fetch: Callable[[models.ProgressFn, CancelToken], None] | None = None,
     ) -> None:
         self.own_glossary = own_glossary or (lambda: "")
         self.preset_book = preset_book or presets.registry
@@ -251,6 +256,13 @@ class Runner:
                                     total_bytes=cardpack.total_size(), auto=False,
                                     resume=(cardpack.resumable if worker_cmd is None else None),
                                     what="the graphics-card support")  # fmt: skip
+        self.speech_language = speech_language or (lambda: "auto")
+        if whisper_present is None:
+            whisper_present = _whisper_present if worker_cmd is None else (lambda: True)
+        # offered, not automatic: downloaded when a job asks for Whisper or the user starts it from Settings
+        self.whisper_model = ModelFetch(self._publish_whisper_model, self._kick, whisper_present,
+                                        whisper_fetch or _fetch_whisper, total_bytes=models.WHISPER_LARGE_V3.size,
+                                        auto=False, what="the Whisper model")  # fmt: skip
         self.machine: dict[str, Any] | None = None  # known a moment after the start
         self.speed_store = speed.SpeedStore(data_dir, vault)
         self.speeds = speed.SpeedFile()
@@ -308,6 +320,7 @@ class Runner:
         self.previews.start()
         self.models.start()
         self.card_pack.start()
+        self.whisper_model.start()
         self.speeds = self.speed_store.load()
         task = self._loop.create_task(self._look_at_machine())
         self._tasks.add(task)
@@ -334,6 +347,7 @@ class Runner:
         await self.fetches.shutdown()  # a download in flight starts again at the next start
         await self.models.shutdown()  # the model's partial file stays: the next start goes on from it
         await self.card_pack.shutdown()  # the same for the graphics-card support
+        await self.whisper_model.shutdown()
         await self.previews.shutdown()
         if cur is None:
             return
@@ -347,6 +361,7 @@ class Runner:
             app_version=__version__, boot_id=self.hub.boot_id, seq=self.hub.seq,
             paused_reason=self.paused_reason, paused_kind=self.paused_kind, jobs=list(self.jobs),
             machine=self.machine_info(), models=self.models.info, card_pack=self.card_pack.info,
+            whisper_model=self.whisper_model.info,
         )  # fmt: skip
 
     # ---- this PC's speed -----------------------------------------------------------------------------------
@@ -404,6 +419,15 @@ class Runner:
         self.card_pack.recheck()  # a support found damaged since is downloaded again
         if not self.card_pack.retry():
             raise JobError("The graphics-card support is already here or on its way.", 409)
+
+    def fetch_whisper_model(self) -> None:
+        """The user asked for the Whisper model (Settings, when choosing the Whisper engine)."""
+        self.whisper_model.recheck()
+        if not self.whisper_model.retry():
+            raise JobError("The Whisper model is already here or on its way.", 409)
+
+    def _publish_whisper_model(self, info: ModelsInfo) -> None:
+        self.hub.publish(lambda seq: WhisperModelEvent(seq=seq, whisper_model=info))
 
     def _card_pack_ready(self) -> None:
         """The support came in, or turned out damaged: look at the PC again ("card", or the offer once more)."""
@@ -621,6 +645,9 @@ class Runner:
                     return
                 continue
             assert job is not None
+            if job.engine == "whisper" and not self.whisper_model.ready:
+                self.whisper_model.retry()  # its model is fetched first (with progress); _kick runs again when in
+                return
             if self._start(job):
                 return
             # it could not even start (and is marked failed): go on with the next one
@@ -666,6 +693,7 @@ class Runner:
                        data_dir=str(self.data_dir), had_video=kept.had_video if kept and kept.had_video else None,
                        frame_rate=kept.frame_rate if kept else None,
                        glossary_text=self.own_glossary(), cpu_threads=self._cpu_threads(),
+                       speech_language=self.speech_language() if job.engine == "whisper" else None,
                        presets=self.job_types())  # fmt: skip
         try:
             _clear_job_dir(out_dir, keep_checkpoint=True)  # an interrupted run's progress: the worker decides
@@ -1075,3 +1103,11 @@ def _write_export(  # noqa: PLR0917 - one call site, in a thread
     except OSError as exc:  # a read-only folder, a full disk, a file open in another program
         raise JobError(f"The subtitles could not be written to {out_dir}: {exc.strerror or exc}", 409) from None
     return list(made), skipped
+
+
+def _whisper_present() -> bool:
+    return models.present((models.WHISPER_LARGE_V3,))
+
+
+def _fetch_whisper(on_progress: models.ProgressFn, cancel: CancelToken) -> None:
+    models.fetch(on_progress, cancel, repos=(models.WHISPER_LARGE_V3,))
