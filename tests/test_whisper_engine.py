@@ -89,6 +89,19 @@ def test_words_get_absolute_times_and_whisper_is_told_the_language() -> None:
     assert call["initial_prompt"] == "Karmapa, Bardo"
 
 
+def test_a_hyphenated_word_split_by_whisper_is_one_word_again() -> None:
+    fake = _FakeWhisper(
+        [[_Word(" Mahayana", 0.0, 0.4, 0.9), _Word("-Buddhisten", 0.4, 0.9, 0.7), _Word(" seid", 1.0, 1.2, 0.8)]]
+    )
+    eng = _engine(fake)
+    seg = eng.transcribe(
+        np.zeros(SR * 2, dtype=np.float32), [Window(0, SR * 2, 0, SR * 2)], lambda _s: None, CancelToken()
+    )
+    words = seg[0].words
+    assert [w.text for w in words] == ["Mahayana-Buddhisten", "seid"]
+    assert words[0].end_s == pytest.approx(0.9) and words[0].conf == pytest.approx(0.7)
+
+
 def test_without_a_language_whisper_detects_it() -> None:
     fake = _FakeWhisper([[_Word(" Hola", 0.0, 0.3, 0.9)]])
     eng = _engine(fake)
@@ -125,3 +138,19 @@ def test_the_engine_is_offered_only_when_faster_whisper_is_installed(monkeypatch
     assert ("whisper" in engines.names()) == whisper.available()
     monkeypatch.setattr(whisper.importlib.util, "find_spec", lambda _name: None)
     assert whisper.available() is False
+
+
+def test_cli_passes_language_model_and_word_list_to_whisper_only() -> None:
+    from parakeet_stt import cli, glossary
+
+    gl = glossary.builtin().with_user(glossary.parse_text("Karmapa = Kamapa\nGampopa\n"))
+    args = cli._parser().parse_args(
+        ["transcribe", "x.mp3", "-o", "out", "--engine", "whisper", "--language", "cs", "--whisper-model", "tiny"]
+    )
+    opts = cli._engine_options(args, gl)
+    assert opts["model"] == "tiny" and opts["language"] == "cs"
+    assert "Karmapa" in str(opts["prompt"]) and "Gampopa" in str(opts["prompt"])
+    parakeet = cli._parser().parse_args(["transcribe", "x.mp3", "-o", "out"])
+    assert cli._engine_options(parakeet, gl) == {"batch_size": 1, "model": "v2"}
+    with pytest.raises(cli._UsageError, match="whisper only"):
+        cli._engine_options(cli._parser().parse_args(["transcribe", "x.mp3", "-o", "out", "--language", "de"]), gl)

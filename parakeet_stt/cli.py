@@ -32,6 +32,7 @@ from parakeet_stt import (
     whisperx_import,
 )
 from parakeet_stt.cancel import Cancelled, CancelToken
+from parakeet_stt.engines import whisper
 from parakeet_stt.engines.base import EngineError
 from parakeet_stt.pipeline import Progress, transcribe_file
 
@@ -44,10 +45,21 @@ def _parser() -> argparse.ArgumentParser:
     t = sub.add_parser("transcribe", help="transcribe one media file")
     t.add_argument("file", type=Path)
     t.add_argument("-o", "--out", type=Path, required=True, help="output folder")
-    t.add_argument("--engine", default=engines.DEFAULT, choices=engines.names())
+    t.add_argument(
+        "--engine", default=engines.DEFAULT, choices=engines.names(),
+        help="parakeet (default, fast) or, where installed, whisper (the language can be set with --language)",
+    )  # fmt: skip
     t.add_argument(
         "--model", default="v2", choices=list(models.SPEECH_MODELS),
         help="speech model: v2 (English only, default) or v3 (multilingual: 25 European languages incl. Czech, German)",
+    )  # fmt: skip
+    t.add_argument(
+        "--language", metavar="CODE",
+        help="whisper only: the spoken language (de, cs, pl, ru, es, ... or auto); Parakeet detects it itself",
+    )  # fmt: skip
+    t.add_argument(
+        "--whisper-model", default=whisper.DEFAULT_MODEL, choices=list(models.WHISPER_MODELS),
+        help=f"whisper only: the model (default {whisper.DEFAULT_MODEL}; tiny is for quick checks)",
     )  # fmt: skip
     t.add_argument(
         "--batch", type=int, default=1, choices=(1, 2), help="speech windows per GPU step (2 = faster, ~7 GB)"
@@ -102,6 +114,16 @@ def _formats(text: str) -> list[str]:
     return wanted
 
 
+def _engine_options(args: argparse.Namespace, gl: glossary.Glossary | None) -> dict[str, object]:
+    """The chosen engine's options. Whisper also gets the spoken language and the word list's terms as its prompt."""
+    if args.engine == "whisper":
+        terms = [e.term for e in gl.entries] if gl is not None else []
+        return {"model": args.whisper_model, "language": args.language, "prompt": whisper.prompt_from_terms(terms)}
+    if args.language:
+        raise _UsageError("--language applies to --engine whisper only: Parakeet detects the language itself")
+    return {"batch_size": args.batch, "model": args.model}
+
+
 def _glossary(files: list[Path] | None) -> glossary.Glossary | None:
     """The built-in glossary plus the files' terms (None: no file given, so the built-in one applies)."""
     if not files:
@@ -119,6 +141,10 @@ def _presets(chosen: list[str] | None) -> list[str]:
     if not chosen:
         return [presets.DEFAULT]
     return presets.names() if "all" in chosen else list(dict.fromkeys(chosen))
+
+
+class _UsageError(Exception):
+    """Options that do not go together; the message is for the user."""
 
 
 class _InsideStore(Exception):
@@ -220,14 +246,17 @@ def _transcribe(args: argparse.Namespace) -> int:
     try:
         _not_inside_store(args.out)
         gl = _glossary(args.glossary)  # before the long recognition: a bad list fails at once
-        needed = (models.SPEECH_MODELS[args.model][0], models.VAD)
-        if args.engine == engines.DEFAULT and not models.present(needed):
+        options = _engine_options(args, gl)
+        whisper_run = args.engine == "whisper"
+        model_repo = models.WHISPER_MODELS[args.whisper_model] if whisper_run else models.SPEECH_MODELS[args.model][0]
+        needed = (model_repo, models.VAD)
+        if not models.present(needed):
             _download_models(cancel, needed)
         with blobserve.media_input(args.file, _vault_of(args.file)) as src:
             result = transcribe_file(
                 args.file,
                 engine_name=args.engine,
-                engine_options={"batch_size": args.batch, "model": args.model},
+                engine_options=options,
                 on_progress=_ProgressPrinter(sys.stderr, log),
                 cancel=cancel,
                 source=src,
@@ -255,7 +284,7 @@ def _transcribe(args: argparse.Namespace) -> int:
         print("Cancelled. Nothing was written.", file=sys.stderr)
         return EXIT_CANCELLED
     except (media.MediaError, project.ProjectError, subtitles.SubtitleError, presets.PresetError, vault.VaultError,
-            glossary.GlossaryError, _InsideStore) as exc:  # fmt: skip
+            glossary.GlossaryError, _InsideStore, _UsageError) as exc:  # fmt: skip
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_USAGE
     except (EngineError, models.ModelFetchError) as exc:

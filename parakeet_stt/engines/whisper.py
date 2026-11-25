@@ -41,6 +41,8 @@ MAX_PROMPT_CHARS = 600
 # The languages a translator can choose; None = Whisper detects it per window.
 LANGUAGES = ("bg", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hr", "hu", "it", "ja", "lt", "lv", "nl",
              "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk", "zh")  # fmt: skip
+# Whisper splits hyphenated words and gives the second half its own entry ("Mahayana", "-Buddhisten").
+_JOINERS = ("-", "\u2010", "\u2011", "\u2013")
 _OUT_OF_MEMORY = ("out of memory", "CUBLAS_STATUS_ALLOC_FAILED", "cudaErrorMemoryAllocation")
 OUT_OF_MEMORY_MESSAGE = (
     "The graphics card has no memory left for the Whisper model; another program is probably using it. "
@@ -202,10 +204,18 @@ class WhisperEngine:
         for seg in segments:  # a generator: recognition happens while iterating
             for word in seg.words or ():
                 text = word.word.strip()
-                if text:
-                    p = float(word.probability)
-                    conf = p if 0 <= p <= 1 else None
-                    words.append(TimedWord(text, offset_s + float(word.start), offset_s + float(word.end), conf))
+                if not text:
+                    continue
+                p = float(word.probability)
+                conf = p if 0 <= p <= 1 else None
+                start, end = offset_s + float(word.start), offset_s + float(word.end)
+                if words and text[0] in _JOINERS:  # "Mahayana" "-Buddhisten": one word, as it is written
+                    prev = words[-1]
+                    confs = [c for c in (prev.conf, conf) if c is not None]
+                    joined_conf = min(confs) if confs else None
+                    words[-1] = TimedWord(prev.text + text, prev.start_s, max(prev.end_s, end), joined_conf)
+                    continue
+                words.append(TimedWord(text, start, end, conf))
         return words
 
 
