@@ -15,10 +15,27 @@ from typing import TextIO
 
 from pydantic import ValidationError
 
-from parakeet_stt import blobserve, engines, export, glossary, media, models, presets, project, subtitles, vault
+from parakeet_stt import (
+    __version__,
+    blobserve,
+    engines,
+    export,
+    glossary,
+    media,
+    models,
+    pipeline,
+    plain_layout,
+    presets,
+    project,
+    subtitles,
+    vault,
+    whisperx_import,
+)
 from parakeet_stt.cancel import Cancelled, CancelToken
+from parakeet_stt.engines import whisper
 from parakeet_stt.engines.base import EngineError
 from parakeet_stt.pipeline import Progress, transcribe_file
+from parakeet_stt.transcript import Document
 
 EXIT_OK, EXIT_USAGE, EXIT_ENGINE, EXIT_CANCELLED = 0, 2, 3, 130
 
@@ -29,7 +46,22 @@ def _parser() -> argparse.ArgumentParser:
     t = sub.add_parser("transcribe", help="transcribe one media file")
     t.add_argument("file", type=Path)
     t.add_argument("-o", "--out", type=Path, required=True, help="output folder")
-    t.add_argument("--engine", default=engines.DEFAULT, choices=engines.names())
+    t.add_argument(
+        "--engine", default=engines.DEFAULT, choices=engines.names(),
+        help="parakeet (default, fast) or, where installed, whisper (the language can be set with --language)",
+    )  # fmt: skip
+    t.add_argument(
+        "--model", default="v2", choices=list(models.SPEECH_MODELS),
+        help="speech model: v2 (English only, default) or v3 (multilingual: 25 European languages incl. Czech, German)",
+    )  # fmt: skip
+    t.add_argument(
+        "--language", metavar="CODE",
+        help="whisper only: the spoken language (de, cs, pl, ru, es, ... or auto); Parakeet detects it itself",
+    )  # fmt: skip
+    t.add_argument(
+        "--whisper-model", default=whisper.DEFAULT_MODEL, choices=list(models.WHISPER_MODELS),
+        help=f"whisper only: the model (default {whisper.DEFAULT_MODEL}; tiny is for quick checks)",
+    )  # fmt: skip
     t.add_argument(
         "--batch", type=int, default=1, choices=(1, 2), help="speech windows per GPU step (2 = faster, ~7 GB)"
     )
@@ -43,6 +75,11 @@ def _parser() -> argparse.ArgumentParser:
         help="what the files hold: the cues' own text and/or their translation (repeatable; default original)",
     )  # fmt: skip
     _subtitle_args(e)
+    r = sub.add_parser("rechunk", help="make subtitle cues from a WhisperX JSON (no GPU): its words, this app's rules")
+    r.add_argument("whisperx_json", type=Path, help="the <name>.json WhisperX wrote")
+    r.add_argument("media", type=Path, help="the media file it was made from (its length is checked)")
+    r.add_argument("-o", "--out", type=Path, required=True, help="output folder")
+    _subtitle_args(r)
     s = sub.add_parser("schema", help="print the transcript JSON Schema, or --write it to schema/")
     s.add_argument("--write", action="store_true")
     return p
@@ -52,6 +89,15 @@ def _subtitle_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--preset", action="append", choices=[*presets.names(), "all"],
         help=f"subtitle rules; repeat for several, 'all' for every one (default {presets.DEFAULT})",
+    )  # fmt: skip
+    p.add_argument(
+        "--glossary", action="append", type=Path, metavar="FILE",
+        help="a list of your own terms (one per line, as in Settings: 'Term = wrong1, wrong2'); repeatable, later wins",
+    )  # fmt: skip
+    p.add_argument(
+        "--layout", default="standard", choices=("standard", "plain"),
+        help="'plain': write <name>.srt and a WhisperX-shaped <name>.json (first preset only) instead of the "
+        "<name>.<preset>.<format> files",
     )  # fmt: skip
     p.add_argument(
         "--format", default="srt", type=_formats,
@@ -69,10 +115,37 @@ def _formats(text: str) -> list[str]:
     return wanted
 
 
+def _engine_options(args: argparse.Namespace, gl: glossary.Glossary | None) -> dict[str, object]:
+    """The chosen engine's options. Whisper also gets the spoken language and the word list's terms as its prompt."""
+    if args.engine == "whisper":
+        terms = [e.term for e in gl.entries] if gl is not None else []
+        return {"model": args.whisper_model, "language": args.language, "prompt": whisper.prompt_from_terms(terms)}
+    if args.language:
+        raise _UsageError("--language applies to --engine whisper only: Parakeet detects the language itself")
+    return {"batch_size": args.batch, "model": args.model}
+
+
+def _glossary(files: list[Path] | None) -> glossary.Glossary | None:
+    """The built-in glossary plus the files' terms (None: no file given, so the built-in one applies)."""
+    if not files:
+        return None
+    texts = []
+    for f in files:
+        try:
+            texts.append(f.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeDecodeError) as exc:
+            raise glossary.GlossaryError(f"The glossary {f.name} cannot be read: {exc}") from None
+    return glossary.current("\n".join(texts))
+
+
 def _presets(chosen: list[str] | None) -> list[str]:
     if not chosen:
         return [presets.DEFAULT]
     return presets.names() if "all" in chosen else list(dict.fromkeys(chosen))
+
+
+class _UsageError(Exception):
+    """Options that do not go together; the message is for the user."""
 
 
 class _InsideStore(Exception):
@@ -115,6 +188,12 @@ class _ProgressPrinter:
 
 
 def _peak_memory_mb() -> float:
+    if sys.platform != "win32":
+        import resource
+
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # kilobytes on Linux, bytes on macOS
+        return float(peak) / (2**20 if sys.platform == "darwin" else 1024)
+
     class Counters(ctypes.Structure):
         _fields_ = [
             ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
@@ -135,7 +214,7 @@ def _peak_memory_mb() -> float:
     return float(c.PeakWorkingSetSize) / 2**20
 
 
-def _download_models(cancel: CancelToken) -> None:
+def _download_models(cancel: CancelToken, repos: tuple[models.Repo, ...] = models.NEEDED) -> None:
     """The first run on a PC: the speech model, with its progress (at most once a second)."""
     last = 0.0
 
@@ -147,8 +226,34 @@ def _download_models(cancel: CancelToken) -> None:
             print(f"\rDownloading the speech model (once): {done / 1e9:.2f} of {total / 1e9:.2f} GB", end="",
                   file=sys.stderr, flush=True)  # fmt: skip
 
-    models.fetch(show, cancel)
+    models.fetch(show, cancel, repos=repos)
     print(file=sys.stderr)
+
+
+def _open_progress_log(path: Path | None) -> TextIO | None:
+    if path is None:
+        return None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path.open("w", encoding="utf-8")
+
+
+def _ensure_models(args: argparse.Namespace, cancel: CancelToken) -> None:
+    """The chosen engine's model and the speech finder, downloaded first if they are not here."""
+    whisper_run = args.engine == "whisper"
+    repo = models.WHISPER_MODELS[args.whisper_model] if whisper_run else models.SPEECH_MODELS[args.model][0]
+    needed = (repo, models.VAD)
+    if not models.present(needed):
+        _download_models(cancel, needed)
+
+
+def _subtitle_files(
+    args: argparse.Namespace, document: Document, gl: glossary.Glossary | None, stem: str
+) -> tuple[Document, list[subtitles.TrackReport], dict[Path, bytes]]:
+    """A track per chosen preset, and the files to write: the plain layout (first preset) or the standard one."""
+    doc, reports = subtitles.ensure_tracks(document, _presets(args.preset), gl)
+    if args.layout == "plain":
+        return doc, reports, plain_layout.files(doc, reports[0].track, gl, args.out, stem)
+    return doc, reports, subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
 
 
 def _transcribe(args: argparse.Namespace) -> int:
@@ -161,20 +266,18 @@ def _transcribe(args: argparse.Namespace) -> int:
         cancel.cancel()
 
     previous = signal.signal(signal.SIGINT, on_sigint)
-    log = None
-    if args.progress_log:
-        args.progress_log.parent.mkdir(parents=True, exist_ok=True)
-        log = args.progress_log.open("w", encoding="utf-8")
+    log = _open_progress_log(args.progress_log)
     t0 = time.perf_counter()
     try:
         _not_inside_store(args.out)
-        if args.engine == engines.DEFAULT and not models.present():
-            _download_models(cancel)
+        gl = _glossary(args.glossary)  # before the long recognition: a bad list fails at once
+        options = _engine_options(args, gl)
+        _ensure_models(args, cancel)
         with blobserve.media_input(args.file, _vault_of(args.file)) as src:
             result = transcribe_file(
                 args.file,
                 engine_name=args.engine,
-                engine_options={"batch_size": args.batch},
+                engine_options=options,
                 on_progress=_ProgressPrinter(sys.stderr, log),
                 cancel=cancel,
                 source=src,
@@ -184,20 +287,21 @@ def _transcribe(args: argparse.Namespace) -> int:
         if cancel.cancelled:
             raise Cancelled
         try:
-            doc, reports = subtitles.ensure_tracks(result.document, _presets(args.preset))
-            outputs = subtitles.files(doc, [r.track.preset_id for r in reports], args.format, args.out, stem)
+            doc, reports, outputs = _subtitle_files(args, result.document, gl, stem)
         except (subtitles.SubtitleError, presets.PresetError, ValidationError) as exc:
             # the recognition took minutes on the GPU: never lose it to a subtitle problem
             project.write_atomically({out_json: project.dumps(result.document)})
             print(f"Error making the subtitles: {exc}", file=sys.stderr)
             print(f"The transcript was saved: {out_json}", file=sys.stderr)
             return EXIT_USAGE
-        project.write_atomically({out_json: project.dumps(doc), **outputs})
+        # plain layout: a caller collecting every file of the folder gets only the .srt and .json it reads
+        keep = {} if args.layout == "plain" else {out_json: project.dumps(doc)}
+        project.write_atomically({**keep, **outputs})
     except Cancelled:
         print("Cancelled. Nothing was written.", file=sys.stderr)
         return EXIT_CANCELLED
     except (media.MediaError, project.ProjectError, subtitles.SubtitleError, presets.PresetError, vault.VaultError,
-            glossary.GlossaryError, _InsideStore) as exc:  # fmt: skip
+            glossary.GlossaryError, _InsideStore, _UsageError) as exc:  # fmt: skip
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_USAGE
     except (EngineError, models.ModelFetchError) as exc:
@@ -219,7 +323,32 @@ def _transcribe(args: argparse.Namespace) -> int:
     )
     for r in reports:
         print(r.line(), file=sys.stderr)
-    print(out_json)
+    if args.layout != "plain":
+        print(out_json)
+    for path in outputs:
+        print(path)
+    return EXIT_OK
+
+
+def _rechunk(args: argparse.Namespace) -> int:
+    try:
+        _not_inside_store(args.out)
+        gl = _glossary(args.glossary)
+        data = json.loads(args.whisperx_json.read_text(encoding="utf-8"))
+        info = media.probe(args.media)
+        doc = whisperx_import.document_from_whisperx(
+            data, pipeline._media(info, info.duration_s), app_version=__version__
+        )
+        doc, reports, outputs = _subtitle_files(args, doc, gl, _stem(args.media.name))
+        project.write_atomically(outputs)
+    except (
+        media.MediaError, project.ProjectError, subtitles.SubtitleError, presets.PresetError, glossary.GlossaryError,
+        ValidationError, ValueError, OSError, _InsideStore,
+    ) as exc:  # fmt: skip
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    for r in reports:
+        print(r.line(), file=sys.stderr)
     for path in outputs:
         print(path)
     return EXIT_OK
@@ -231,14 +360,19 @@ def _export(args: argparse.Namespace) -> int:
         doc = project.load(args.project, sealed_by if vault.is_sealed(args.project) else None)
         out_dir = args.out or args.project.parent
         _not_inside_store(out_dir)
-        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset))
-        made, skipped = subtitles.files_for(
-            new_doc,
-            [r.track.preset_id for r in reports],
-            args.format,
-            args.text or ["original"],
-            out_dir,
-            _stem(args.project.name),
+        gl = _glossary(args.glossary)
+        new_doc, reports = subtitles.ensure_tracks(doc, _presets(args.preset), gl)
+        made, skipped = (
+            (plain_layout.files(new_doc, reports[0].track, gl, out_dir, _stem(args.project.name)), [])
+            if args.layout == "plain"
+            else subtitles.files_for(
+                new_doc,
+                [r.track.preset_id for r in reports],
+                args.format,
+                args.text or ["original"],
+                out_dir,
+                _stem(args.project.name),
+            )
         )
         for pid in skipped:
             print(f"{pid}: no cue is translated yet, so no translated file", file=sys.stderr)
@@ -269,6 +403,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command == "export":
         return _export(args)
+    if args.command == "rechunk":
+        return _rechunk(args)
     if not args.file.is_file():
         print(f"Error: file not found: {args.file}", file=sys.stderr)
         return EXIT_USAGE

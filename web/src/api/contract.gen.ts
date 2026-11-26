@@ -15,7 +15,8 @@ export type ServerMessage =
   | RemovedEvent
   | MachineEvent
   | ModelsEvent
-  | CardPackEvent;
+  | CardPackEvent
+  | WhisperModelEvent;
 
 /**
  * Every shape the server and the window exchange.
@@ -690,6 +691,16 @@ export interface Status {
   machine: MachineInfo | null;
   models: ModelsInfo | null;
   card_pack: ModelsInfo | null;
+  whisper_model: ModelsInfo | null;
+}
+/**
+ * This interface was referenced by `ApiContract`'s JSON-Schema
+ * via the `definition` "WhisperModelEvent".
+ */
+export interface WhisperModelEvent {
+  type: "whisper_model";
+  seq: number;
+  whisper_model: ModelsInfo;
 }
 /**
  * The user's choices, kept in <data>/settings.json (not in the browser, which can be reset).
@@ -705,6 +716,7 @@ export interface Settings {
   output: "beside_source" | "folder";
   output_dir: string | null;
   language: "en" | "cs";
+  speech_language: string;
   look: "light" | "dark";
   glossary_text: string;
   custom_presets: Preset1[];

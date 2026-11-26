@@ -9,16 +9,34 @@ from __future__ import annotations
 import io
 import re
 import subprocess
+import sys
 import threading
 import time
 from collections import deque
 from collections.abc import Callable
-from typing import Final, Protocol, cast
+from typing import Any, Final, Protocol, cast
 
 from parakeet_stt.cancel import Cancelled, CancelToken
 
 PIPE_READ: Final = 256 * 1024
 PRIORITY: Final = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+
+
+def spawn_options(*, own_group: bool = False, no_window: bool = False, low_priority: bool = False) -> dict[str, Any]:
+    """`Popen` options for a child ffmpeg/ffprobe, the same on Windows (creation flags) and elsewhere (a session of its
+    own, so a console Ctrl+C reaches us and not the child; the priority is left alone)."""
+    if sys.platform == "win32":
+        flags = 0
+        if own_group:
+            flags |= subprocess.CREATE_NEW_PROCESS_GROUP
+        if no_window:
+            flags |= subprocess.CREATE_NO_WINDOW
+        if low_priority:
+            flags |= PRIORITY
+        return {"creationflags": flags}
+    return {"start_new_session": True} if own_group else {}
+
+
 TIMEOUT_S: Final = 120
 PROGRESS_ARGS: Final = ("-nostats", "-progress", "pipe:2")  # put right after the ffmpeg executable
 _PROGRESS_LINE = re.compile(r"^[a-z0-9_]+=")  # ffmpeg's -progress output (values may be padded), not an error
@@ -48,7 +66,7 @@ def run(
     # feeder keeps its CPU)
     proc = subprocess.Popen(
         cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW | PRIORITY,
+        **spawn_options(own_group=True, no_window=True, low_priority=True),
     )  # fmt: skip
     assert proc.stdout is not None and proc.stderr is not None
     err_tail: deque[str] = deque(maxlen=50)

@@ -4,8 +4,20 @@ Third-party software in TalkSubs
 TalkSubs itself is under the MIT licence (LICENSE). The app window (parakeet_stt/server/static) is built from
 the libraries below; their notices follow. The Python libraries in the download package carry their own licence
 files inside python/Lib/site-packages (*.dist-info); FFmpeg's notice and licences are in the ffmpeg folder.
-The speech model (NVIDIA Parakeet TDT 0.6B v2, CC BY 4.0) and the voice detector (Silero VAD, MIT) are credited
-in README.md and on the app's Help page.
+The speech models (NVIDIA Parakeet TDT 0.6B v2 and v3, CC BY 4.0) and the voice detector (Silero VAD, MIT) are
+credited in README.md and on the app's Help page.
+
+Speech models in the container image (Dockerfile)
+-------------------------------------------------
+NVIDIA Parakeet TDT 0.6B v3 - https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+  (c) NVIDIA, licensed under CC BY 4.0 - https://creativecommons.org/licenses/by/4.0/
+  Used here in the ONNX conversion by istupakov: https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx
+  (CC BY 4.0). The files are unchanged copies of that conversion (pinned revision and SHA-256 in
+  parakeet_stt/models.py); the conversion changed the format, not the model's behaviour.
+
+Silero VAD - https://github.com/snakers4/silero-vad
+  MIT License, Copyright (c) 2020-present Silero Team. The above copyright notice and the MIT permission notice
+  apply to the voice detector model shipped in the image.
 
 
 wavesurfer.js 8.0.5 - https://github.com/katspaugh/wavesurfer.js

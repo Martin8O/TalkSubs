@@ -238,7 +238,7 @@ def test_the_cli_exports_a_sealed_project_and_keeps_it_sealed(data: Path, tmp_pa
     assert cli.main(["export", str(sealed), "--preset", "all", "--format", "srt", "-o", str(out)]) == cli.EXIT_OK
     assert PHRASE in next(out.glob("*.cz-template.srt")).read_text(encoding="utf-8")
     assert vault.is_sealed(sealed) and [t.preset_id for t in project.load(sealed, key).subtitles] == [
-        "cz-template", "en-subtitles"]  # fmt: skip
+        "cz-template", "de-template", "en-subtitles"]  # fmt: skip
     # plain subtitle files never go into the app's own store - only into its own export folder
     for inside in (folder, data, data / "uploads"):
         assert cli.main(["export", str(sealed), "--format", "srt", "-o", str(inside)]) == cli.EXIT_USAGE, inside

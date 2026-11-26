@@ -181,6 +181,19 @@ def names(directory: Path = PRESETS_DIR) -> list[str]:
     return list(registry(directory))
 
 
+def default_names(directory: Path = PRESETS_DIR) -> list[str]:
+    """The built-in types made and ticked by default: those for English text (Parakeet writes English). A type for
+    another language (de-template) is offered, and made when a job's spoken language is set to it."""
+    return [pid for pid, p in registry(directory).items() if p.language == "en"]
+
+
+def for_language(language: str | None, directory: Path = PRESETS_DIR) -> list[str]:
+    """The built-in types for text in this language besides the default ones ("de" -> de-template)."""
+    if not language or language == "en":
+        return []
+    return [pid for pid, p in registry(directory).items() if p.language == language]
+
+
 @cache
 def standards(directory: Path = STANDARDS_DIR) -> dict[str, Preset]:
     """Published standards as starting points for the user's own types (not used as they are)."""

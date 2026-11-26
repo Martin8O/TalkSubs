@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import ctypes
 import gc
+import os
 import statistics
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -35,8 +37,23 @@ class Result:
     tried: dict[int, float]  # thread count -> model rate (processor only)
 
 
+def _process_age_s_posix() -> float:
+    if sys.platform == "win32":  # (never called there; tells the type checker that sysconf exists below)
+        return 0.0
+    try:  # Linux: start time in clock ticks since boot, the 22nd field of /proc/self/stat (after the "(name)")
+        with open("/proc/self/stat", encoding="utf-8") as fh:
+            fields = fh.read().rsplit(")", 1)[1].split()
+        with open("/proc/uptime", encoding="utf-8") as fh:
+            uptime = float(fh.read().split()[0])
+        return max(0.0, uptime - int(fields[19]) / os.sysconf("SC_CLK_TCK"))
+    except (OSError, ValueError, IndexError):
+        return 0.0
+
+
 def process_age_s() -> float:
     """Seconds since this process was created (so the interpreter's own start and every import are counted)."""
+    if sys.platform != "win32":
+        return _process_age_s_posix()
 
     class FileTime(ctypes.Structure):
         _fields_ = [("low", ctypes.c_uint32), ("high", ctypes.c_uint32)]

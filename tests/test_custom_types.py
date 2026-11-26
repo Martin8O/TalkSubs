@@ -87,7 +87,7 @@ def test_the_worker_makes_each_type_on_its_own_and_reports_the_one_that_fails(tm
     spec = worker.JobSpec(source="x", out_dir="x", stem="x", engine="parakeet", data_dir="x",
                           presets=[own(), broken])  # fmt: skip
     made, note = worker._make_tracks(doc, spec)
-    assert {t.preset_id for t in made.subtitles} == {*presets.names(), "my-slow"}
+    assert {t.preset_id for t in made.subtitles} == {*presets.default_names(), "my-slow"}
     assert note is not None and "Broken" in note
 
 
@@ -200,4 +200,5 @@ def test_types_are_listed_in_the_users_order_everywhere(client: TestClient) -> N
            "type_order": ["my-slow", "en-subtitles"]}  # fmt: skip
     r = client.put("/api/settings", json=new, headers=ORIGIN)
     assert r.status_code == 200, r.text
-    assert [p["id"] for p in r.json()["presets"]] == ["my-slow", "en-subtitles", "cz-template"]  # unnamed: after
+    listed = [p["id"] for p in r.json()["presets"]]
+    assert listed == ["my-slow", "en-subtitles", "cz-template", "de-template"]  # unnamed: after

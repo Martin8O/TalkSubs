@@ -12,7 +12,7 @@ break_before = [
 ]
 
 # Never end a cue or a line right AFTER one of these: articles, determiners, possessives, prepositions,
-# subject pronouns (the verb follows), auxiliaries and modals, titles before a name (listing "mr" also keeps
+# subject pronouns (the verb follows), auxiliaries and modals, conjunctions that open a clause, titles before a name (listing "mr" also keeps
 # "Mr." from counting as the end of a sentence).
 no_break_after = [
   "a", "an", "the", "this", "these", "those", "my", "your", "his", "her", "its", "our", "their", "some", "any",
@@ -23,6 +23,7 @@ no_break_after = [
   "am", "is", "are", "was", "were", "be", "been", "will", "would", "can", "could", "shall", "should", "may",
   "might", "must", "do", "does", "did", "have", "has", "had", "not",
   "mr", "mrs", "ms", "dr", "st",
+  "and", "but", "or", "because", "if", "than",
 ]
 
 # Words written with a capital that are NOT names (so "I" + "Think" style pairs are not kept together).

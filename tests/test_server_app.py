@@ -12,7 +12,7 @@ from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
 
-from parakeet_stt import cli
+from parakeet_stt import cli, engines
 from parakeet_stt.server import uploads
 from parakeet_stt.vault import Role
 from tests.conftest import MakeClip, key_of, unsealed
@@ -61,11 +61,13 @@ def test_settings_have_defaults_and_are_kept_on_the_server(client: TestClient, d
     assert s["engine"] == "parakeet" and s["output"] == "beside_source" and s["output_dir"] is None
     assert s["export_presets"] == ["cz-template", "en-subtitles"] and s["export_formats"] == ["srt"]
     assert view["output_dir_default"] == str(data / "subtitles")
-    assert {p["id"] for p in view["presets"]} == {"cz-template", "en-subtitles"} and s["language"] == "en"
+    assert {p["id"] for p in view["presets"]} == {"cz-template", "de-template", "en-subtitles"}
+    assert s["language"] == "en"
     assert s["look"] == "light"
     cz = next(p for p in view["presets"] if p["id"] == "cz-template")
     assert (cz["max_chars_per_line"], cz["max_lines"], cz["max_cps"], cz["max_duration_ms"]) == (42, 2, 17.0, 7000)
-    assert view["formats"] == ["srt", "vtt", "ass", "txt", "xlsx"] and view["engines"] == ["parakeet"]
+    assert view["formats"] == ["srt", "vtt", "ass", "txt", "xlsx"] and view["engines"] == engines.names()
+    assert view["engines"][0] == "parakeet"  # the default; whisper follows where faster-whisper is installed
 
     out = tmp_path / "subs"
     out.mkdir()
@@ -114,7 +116,7 @@ def test_an_engine_an_earlier_version_offered_falls_back_to_the_default(data: Pa
     store = SettingsStore(data, vault)
     store.save(store.load())
     raw = json.loads(unsealed(data / "settings.json", Role.SETTINGS))
-    old = json.dumps({**raw, "engine": "whisper"}).encode()  # what 1.0.0 could save
+    old = json.dumps({**raw, "engine": "qwen3-asr"}).encode()  # an engine this version does not offer
     (data / "settings.json").write_bytes(vault.seal(old, Role.SETTINGS))
     loaded = store.load()
     assert loaded.engine == "parakeet"

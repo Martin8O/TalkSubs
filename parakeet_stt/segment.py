@@ -67,6 +67,31 @@ def build_track(
     )  # fmt: skip
 
 
+# Scripts written without spaces between words (Chinese, Japanese, Thai, Lao, Khmer, Burmese): Whisper gives their
+# words as pieces, and two pieces meet without a space. Everything else is joined with one.
+_NO_SPACE = (
+    (0x0E00, 0x0EFF), (0x1000, 0x109F), (0x1780, 0x17FF), (0x3000, 0x303F), (0x3040, 0x30FF), (0x3400, 0x4DBF),
+    (0x4E00, 0x9FFF), (0xF900, 0xFAFF), (0xFF00, 0xFFEF),
+)  # fmt: skip
+
+
+def _no_space(ch: str) -> bool:
+    o = ord(ch)
+    return any(a <= o <= b for a, b in _NO_SPACE)
+
+
+def word_gap(left: str, right: str) -> str:
+    """What goes between two words: nothing between two pieces of a script without spaces, else one space."""
+    return "" if left and right and _no_space(left[-1]) and _no_space(right[0]) else " "
+
+
+def join_words(texts: Sequence[str]) -> str:
+    out = ""
+    for t in texts:
+        out = t if not out else out + word_gap(out, t) + t
+    return out
+
+
 class Segmenter:
     def __init__(self, preset: Preset, lang: Language, fps: FrameRate) -> None:
         self.p, self.lang, self.fps = preset, lang, fps
@@ -112,16 +137,17 @@ class Segmenter:
     def layout(self, ws: Sequence[_W]) -> tuple[list[str], float] | None:
         """The best line split of these words, or None if they cannot fit the line limits."""
         maxc = self.lim.max_chars_per_line
-        text = " ".join(x.text for x in ws)
+        gaps = [""] + [word_gap(ws[k - 1].text, ws[k].text) for k in range(1, len(ws))]
+        text = "".join(g + x.text for g, x in zip(gaps, ws, strict=True))
         if len(text) <= maxc:
             return [text], 0.0
         if self.lim.max_lines == 1:
             return None
         best: tuple[list[str], float] | None = None
-        top = -1
+        top = 0  # length of the first line when it ends with word k - 1
         for k in range(1, len(ws)):
-            top += len(ws[k - 1].text) + 1
-            bottom = len(text) - top - 1
+            top += len(gaps[k - 1]) + len(ws[k - 1].text)
+            bottom = len(text) - top - len(gaps[k])
             if top > maxc:
                 break
             if bottom > maxc:
@@ -130,7 +156,7 @@ class Segmenter:
             if top > bottom:
                 cost += self.w.cost_top_heavy
             if best is None or cost < best[1]:
-                best = ([text[:top], text[top + 1 :]], cost)
+                best = ([text[:top], text[top + len(gaps[k]) :]], cost)
         return best
 
     def _counted(self, ws: Sequence[_W], chars_with_spaces: int) -> int:
@@ -169,9 +195,9 @@ class Segmenter:
         for j in range(1, n + 1):
             nxt = ws[j] if j < n else None
             end_cost = self.break_cost(ws[j - 1], nxt)
-            chars = -1
+            chars = 0
             for i in range(j - 1, -1, -1):
-                chars += len(ws[i].text) + 1
+                chars += len(ws[i].text) + (len(word_gap(ws[i].text, ws[i + 1].text)) if i < j - 1 else 0)
                 span = ws[j - 1].end - ws[i].start
                 single = i == j - 1
                 if not single and (chars > self.max_chars or span > self.budget_ms):

@@ -17,6 +17,8 @@ dependencies = [
     "uvicorn>=0.38",
     "websockets>=15",
     "cryptography==50.0.2",
+    # the optional second engine (Whisper, the spoken language chosen in Settings); its model is fetched on demand
+    "faster-whisper==1.2.1",
 ]
 
 [project.scripts]
@@ -36,6 +38,9 @@ dev = [
 [tool.uv]
 # never let uv fetch an interpreter: the project venv is Python 3.11 on the project drive
 python-downloads = "never"
+# faster-whisper asks for the CPU onnxruntime (only for its own speech finder, which the app never uses: Silero VAD
+# runs in our pipeline). Installed beside onnxruntime-gpu it would replace the same module, so it is left out.
+override-dependencies = ["onnxruntime ; sys_platform == 'never'"]
 
 [tool.uv.sources]
 torch = { index = "pytorch-cu128" }
@@ -70,7 +75,7 @@ files = ["parakeet_stt", "tests", "scripts/doctor.py", "scripts/gen_types.py"]
 exclude = ["^data/", "^\\.cache/"]
 
 [[tool.mypy.overrides]]
-module = ["onnx_asr.*", "onnxruntime.*", "onnx.*", "jiwer.*"]
+module = ["onnx_asr.*", "onnxruntime.*", "onnx.*", "jiwer.*", "faster_whisper.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -1,0 +1,53 @@
+name: docker-image
+
+# Builds the headless CLI image (CPU and CUDA flavours) and pushes it to GHCR. Manual, or on a tag cli-*.
+# The CUDA image is what Google Cloud Batch pulls for transcription jobs.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["cli-*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - flavour: cpu
+            base: debian:trixie-slim
+            ort: onnxruntime==1.23.2
+          - flavour: cuda
+            base: nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
+            ort: onnxruntime-gpu==1.23.2
+    steps:
+      - name: Free disk space (the CUDA image with the model is large)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/talksubs-cli" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            BASE=${{ matrix.base }}
+            ORT=${{ matrix.ort }}
+          tags: |
+            ${{ steps.meta.outputs.name }}:${{ matrix.flavour }}-${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.name }}:${{ matrix.flavour }}
+          cache-from: type=gha,scope=${{ matrix.flavour }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.flavour }}

@@ -6,6 +6,7 @@ import { inOrder } from "../state/order";
 import { presetText, s } from "../strings";
 import { Info } from "./Info";
 import { MachineLine } from "./MachineLine";
+import { WhisperModel } from "./WhisperModel";
 import { infoOf, TypesEditor } from "./TypesEditor";
 
 interface Props {
@@ -15,12 +16,34 @@ interface Props {
   machine?: MachineInfo | null;
   onDirty?: (dirty: boolean) => void; // tells the window whether leaving would lose changes
   cardPack?: ModelsInfo | null;
+  whisperModel?: ModelsInfo | null;
+}
+
+// the spoken languages Whisper can be told (the engine's own list: parakeet_stt/engines/whisper.py)
+const SPEECH_LANGUAGES = ["bg", "cs", "da", "de", "el", "en", "es", "fi", "fr", "he", "hr", "hu", "it", "ja", "lt",
+  "lv", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "uk", "zh"];
+
+/** A language's name in the window's language ("de" -> "German" / "němčina"); the code where the browser has none. */
+function languageName(code: string, windowLang: string): string {
+  try {
+    return new Intl.DisplayNames([windowLang], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
 
 const toggle = (list: string[], item: string) =>
   list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 
-export function SettingsPage({ view, loadError, onSaved, machine = null, onDirty, cardPack = null }: Props) {
+export function SettingsPage({
+  view,
+  loadError,
+  onSaved,
+  machine = null,
+  onDirty,
+  cardPack = null,
+  whisperModel = null,
+}: Props) {
   const S = s();
   const [draft, setDraft] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
@@ -117,6 +140,26 @@ export function SettingsPage({ view, loadError, onSaved, machine = null, onDirty
               </label>
             ))}
             <p className="field-note">{S.settings.engineNote}</p>
+          </>
+        )}
+        {cur.engine === "whisper" && (
+          <>
+            <label className="field">
+              <span>{S.settings.speechLanguage}</span>
+              <select
+                value={cur.speech_language ?? "auto"}
+                onChange={(e) => change({ speech_language: e.target.value })}
+              >
+                <option value="auto">{S.settings.speechLanguageAuto}</option>
+                {SPEECH_LANGUAGES.map((code) => (
+                  <option key={code} value={code}>
+                    {languageName(code, cur.language)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="field-note">{S.settings.speechLanguageNote}</p>
+            <WhisperModel model={whisperModel} />
           </>
         )}
       </fieldset>

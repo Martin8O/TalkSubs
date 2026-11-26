@@ -252,3 +252,20 @@ def test_gap_closing_works_at_every_frame_rate(fps: FrameRate) -> None:
         first, second = seg(fps=fps).cues([*a, *b], 120_000)[:2]
         gap = round((second.start_ms - first.end_ms) / frame)  # word edges are off the grid: +-1 frame
         assert gap == 2 if closed else gap > 11, (gap_frames, gap)
+
+
+def test_japanese_pieces_meet_without_spaces_and_mixed_text_keeps_them() -> None:
+    from parakeet_stt.segment import join_words
+
+    assert join_words(["同", "様", "に、", "一", "瞬"]) == "同様に、一瞬"
+    assert join_words(["何", "から", "喜", "び", "with", "the", "ways"]) == "何から喜び with the ways"
+    assert join_words(["the", "mind"]) == "the mind"
+    pieces = (
+        "同 様 に、 一 瞬 の 純 然 た る 明 瞭 さ が、 育 成 の 時 代 の "
+        + "無 知、 邪 悪 や 混 乱 を 払 い の ける でしょう。"
+    )
+    words = timed(pieces, word_ms=120, gap_ms=10)
+    cues = seg().cues(words, end_of(words))
+    text = "".join("".join(c.lines) for c in cues)
+    assert " " not in text
+    assert text == pieces.replace(" ", "")

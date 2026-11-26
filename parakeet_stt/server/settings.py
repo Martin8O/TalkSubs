@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from parakeet_stt import engines, export, glossary, presets
 from parakeet_stt import vault as vault_mod
+from parakeet_stt.engines import whisper
 from parakeet_stt.project import write_atomically
 from parakeet_stt.server.messages import SETTINGS_SCHEMA_VERSION, PresetInfo, Settings, SettingsView
 from parakeet_stt.vault import Role, Vault, VaultError
@@ -133,6 +134,13 @@ class SettingsStore:
             builtin_presets=list(reg.values()),
         )
 
+    def speech_language(self) -> str:
+        """The spoken language for the Whisper engine ("auto" while locked or when the settings cannot be read)."""
+        try:
+            return self.load().speech_language
+        except SettingsError:
+            return "auto"
+
     def own_glossary(self) -> str:
         """The user's own list of terms as typed ("" while locked or when the settings cannot be read)."""
         try:
@@ -198,6 +206,8 @@ def check_own_types(settings: Settings) -> None:
 def check(settings: Settings) -> None:
     if settings.engine not in engines.names():
         raise SettingsError(f"Unknown engine {settings.engine!r}. Available: {', '.join(engines.names())}.")
+    if settings.speech_language != "auto" and settings.speech_language not in whisper.LANGUAGES:
+        raise SettingsError(f"Unknown spoken language {settings.speech_language!r}.")
     check_own_types(settings)
     check_choice(settings.export_presets, settings.export_formats, presets.book(settings.custom_presets))
     try:
